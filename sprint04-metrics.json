@@ -1,0 +1,50 @@
+{
+  "agent_detection": {
+    "total_repos": 10,
+    "true_positives": 2,
+    "true_negatives": 1,
+    "false_positives": 6,
+    "false_negatives": 1,
+    "precision_pct": 25,
+    "recall_pct": 67,
+    "f1_score_pct": 36
+  },
+  "asset_confusion_matrix": {
+    "AGENT": {
+      "NON_AI": 1,
+      "AGENT": 2
+    },
+    "SDK_LIBRARY": {
+      "AGENT": 1
+    },
+    "VECTOR_STORE": {
+      "AGENT": 2
+    },
+    "NON_AI": {
+      "AGENT": 2
+    },
+    "MODEL_RUNTIME": {
+      "NON_AI": 1
+    },
+    "MODEL_PROVIDER": {
+      "AGENT": 1
+    }
+  },
+  "capability_metrics": {
+    "all_capabilities": {
+      "tp": 7,
+      "fp": 7,
+      "fn": 8,
+      "precision_pct": 50,
+      "recall_pct": 47,
+      "fp_rate_pct": 50
+    },
+    "critical_capabilities": {
+      "tp": 2,
+      "fp": 2,
+      "fn": 1,
+      "critical_fp_count": 2,
+      "precision_pct": 50
+    }
+  }
+}

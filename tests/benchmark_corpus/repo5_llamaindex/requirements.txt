@@ -1,0 +1,3 @@
+llama-index>=0.10.0
+llama-index-llms-mistralai>=0.1.0
+sqlite3

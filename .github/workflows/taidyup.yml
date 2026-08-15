@@ -1,0 +1,36 @@
+name: tAIdyup Technical Governance
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    name: Reconcile AI Agent Authority
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install tAIdyup CLI
+        run: npm install -g taidyup-0.1.0-alpha.1.tgz
+
+      - name: Validate tAIdyup Manifest & Code Evidence
+        run: taidyup validate --strict
+
+      - name: Generate Technical Passport & SARIF
+        run: taidyup report
+
+      - name: Upload SARIF Security Findings
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: taidyup.sarif

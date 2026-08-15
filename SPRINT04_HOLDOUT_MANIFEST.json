@@ -1,0 +1,92 @@
+[
+  {
+    "benchmark_id": "H-001",
+    "origin_url": "https://github.com/phidata-inc/phidata.git",
+    "commit_sha": "41d939d90008517ce326fd876d2bbbb7809ed0bc",
+    "license": "MIT",
+    "fetched_at": "2026-08-15T17:03:42.142Z",
+    "snapshot_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "selection_reason": "Real multi-agent framework with tools and memory"
+  },
+  {
+    "benchmark_id": "H-002",
+    "origin_url": "https://github.com/geekan/MetaGPT.git",
+    "commit_sha": "11cdf466d042aece04fc6cfd13b28e1a70341b1f",
+    "license": "MIT",
+    "fetched_at": "2026-08-15T17:03:45.378Z",
+    "snapshot_hash": "14780517191a674ed3be2b335d0ff799b07c09ef54e1c49effa61befa74c83ac",
+    "selection_reason": "Multi-agent software role framework"
+  },
+  {
+    "benchmark_id": "H-003",
+    "origin_url": "https://github.com/BerriAI/litellm.git",
+    "commit_sha": "87abb8781ee2e586858c9e9943ecb789e316af96",
+    "license": "MIT",
+    "fetched_at": "2026-08-15T17:03:55.609Z",
+    "snapshot_hash": "ce458dbb0c1c1213453b979ed005cf3d724e90d2db27caccd2d98e47495be15e",
+    "selection_reason": "Client SDK / LLM Proxy library"
+  },
+  {
+    "benchmark_id": "H-004",
+    "origin_url": "https://github.com/qdrant/qdrant.git",
+    "commit_sha": "74f3e85b9473c62560006c043e13737ce6b48412",
+    "license": "Apache-2.0",
+    "fetched_at": "2026-08-15T17:03:58.690Z",
+    "snapshot_hash": "02426ea17fcb62a98c5edd299da6bbcac2dd39a08f0fc7407dcc6dde9522eabb",
+    "selection_reason": "Vector Database engine infrastructure"
+  },
+  {
+    "benchmark_id": "H-005",
+    "origin_url": "https://github.com/fastapi/fastapi.git",
+    "commit_sha": "a1fa70d4237d50aae6586a0d9b229df583463d21",
+    "license": "MIT",
+    "fetched_at": "2026-08-15T17:04:02.952Z",
+    "snapshot_hash": "a144ec5c9670630cbcc81ae349b7e37f17f1f440a3c83b956b244bbd0a58f53f",
+    "selection_reason": "Conventional Python Web API framework (Non-AI Control)"
+  },
+  {
+    "benchmark_id": "H-006",
+    "origin_url": "https://github.com/ollama/ollama.git",
+    "commit_sha": "e5a81899d014a847a08d47393351908b53d74008",
+    "license": "MIT",
+    "fetched_at": "2026-08-15T17:04:07.471Z",
+    "snapshot_hash": "c602348303ce69ca19db2881fb0cb545c2a13c4a7902cb94e77b172f17154db8",
+    "selection_reason": "Model runtime server for local LLM inference"
+  },
+  {
+    "benchmark_id": "H-007",
+    "origin_url": "https://github.com/xai-org/grok-1.git",
+    "commit_sha": "7050ed204b8206bb8645c7b7bbef7252f79561b0",
+    "license": "Apache-2.0",
+    "fetched_at": "2026-08-15T17:04:08.548Z",
+    "snapshot_hash": "0bc2cd0773f1279ca1e3c427a726336be216335e7c792584ab67a9f080224f28",
+    "selection_reason": "Model weights release repository"
+  },
+  {
+    "benchmark_id": "H-008",
+    "origin_url": "https://github.com/gpt-engineer-org/gpt-engineer.git",
+    "commit_sha": "a90fcd543eedcc0ff2c34561bc0785d2ba83c47e",
+    "license": "MIT",
+    "fetched_at": "2026-08-15T17:04:11.084Z",
+    "snapshot_hash": "78f4e7bb38c3adddf219588c0b360bc79262435b1faac8938078865a39955633",
+    "selection_reason": "Autonomous code generation agent harness"
+  },
+  {
+    "benchmark_id": "H-009",
+    "origin_url": "https://github.com/milvus-io/milvus.git",
+    "commit_sha": "b43a76673a9fe5f01f158979731dc8fd542df81f",
+    "license": "Apache-2.0",
+    "fetched_at": "2026-08-15T17:04:25.785Z",
+    "snapshot_hash": "c9ece5ab80678fe64001cdf18b0648fa011fde1363d0047e67acf1ac18f92ceb",
+    "selection_reason": "Cloud-native vector database infrastructure"
+  },
+  {
+    "benchmark_id": "H-010",
+    "origin_url": "https://github.com/nestjs/nest.git",
+    "commit_sha": "16a99fd748a969e5f98f4d20f109b6061b01552a",
+    "license": "MIT",
+    "fetched_at": "2026-08-15T17:04:27.731Z",
+    "snapshot_hash": "bcf890624cd882398be3d368e2bf80a32b540a5c7f0864b040e9e8010264fb99",
+    "selection_reason": "Conventional TypeScript backend framework (Non-AI Control)"
+  }
+]

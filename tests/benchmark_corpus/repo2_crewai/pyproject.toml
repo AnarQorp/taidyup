@@ -1,0 +1,5 @@
+[tool.poetry.dependencies]
+python = "^3.10"
+crewai = "^0.30.0"
+langchain-openai = "^0.1.7"
+serper = "^0.1.0"

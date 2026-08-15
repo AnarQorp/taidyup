@@ -1,0 +1,4 @@
+[tool.poetry.dependencies]
+python = "^3.11"
+pyautogen = "^0.2.27"
+openai = "^1.25.0"

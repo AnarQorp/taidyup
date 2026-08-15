@@ -1,0 +1,4 @@
+[tool.poetry.dependencies]
+python = "^3.11"
+semantic-kernel = "^1.1.0"
+azure-identity = "^1.15.0"

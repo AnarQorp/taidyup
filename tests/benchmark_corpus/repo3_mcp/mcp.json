@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "node",
+      "args": ["dist/index.js"]
+    }
+  }
+}

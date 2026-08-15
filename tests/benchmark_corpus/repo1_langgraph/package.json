@@ -1,0 +1,10 @@
+{
+  "name": "langgraph-customer-support",
+  "version": "1.0.0",
+  "dependencies": {
+    "@langchain/core": "^0.2.0",
+    "@langchain/langgraph": "^0.0.15",
+    "@langchain/openai": "^0.1.0",
+    "tavily": "^0.0.8"
+  }
+}

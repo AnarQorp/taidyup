@@ -1,0 +1,102 @@
+[
+  {
+    "benchmark_id": "H-001",
+    "agent_exists": true,
+    "primaryAssetType": "AGENT",
+    "framework": "Phidata",
+    "provider": "UNKNOWN",
+    "capabilities": ["READ", "WRITE", "EXECUTE"],
+    "ground_truth_confidence": 0.95,
+    "ground_truth_notes": "Multi-agent assistant framework with tools, web search, and memory."
+  },
+  {
+    "benchmark_id": "H-002",
+    "agent_exists": true,
+    "primaryAssetType": "AGENT",
+    "framework": "MetaGPT",
+    "provider": "UNKNOWN",
+    "capabilities": ["READ", "WRITE", "EXECUTE", "CREATE"],
+    "ground_truth_confidence": 0.95,
+    "ground_truth_notes": "Multi-agent framework assigning software company roles to autonomous agents."
+  },
+  {
+    "benchmark_id": "H-003",
+    "agent_exists": false,
+    "primaryAssetType": "SDK_LIBRARY",
+    "framework": "NONE",
+    "provider": "UNKNOWN",
+    "capabilities": [],
+    "ground_truth_confidence": 0.95,
+    "ground_truth_notes": "Client SDK / LLM Proxy library. Non-agent infrastructure."
+  },
+  {
+    "benchmark_id": "H-004",
+    "agent_exists": false,
+    "primaryAssetType": "VECTOR_STORE",
+    "framework": "NONE",
+    "provider": "NONE",
+    "capabilities": ["READ", "CREATE"],
+    "ground_truth_confidence": 1.0,
+    "ground_truth_notes": "Vector Database engine written in Rust. Non-agent infrastructure."
+  },
+  {
+    "benchmark_id": "H-005",
+    "agent_exists": false,
+    "primaryAssetType": "NON_AI",
+    "framework": "NONE",
+    "provider": "NONE",
+    "capabilities": [],
+    "ground_truth_confidence": 1.0,
+    "ground_truth_notes": "Conventional Python Web API framework. Zero AI functionality."
+  },
+  {
+    "benchmark_id": "H-006",
+    "agent_exists": false,
+    "primaryAssetType": "MODEL_RUNTIME",
+    "framework": "NONE",
+    "provider": "Ollama",
+    "capabilities": [],
+    "ground_truth_confidence": 0.95,
+    "ground_truth_notes": "Model runtime server for local LLM inference. Infrastructure, not an agent."
+  },
+  {
+    "benchmark_id": "H-007",
+    "agent_exists": false,
+    "primaryAssetType": "MODEL_PROVIDER",
+    "framework": "NONE",
+    "provider": "xAI",
+    "capabilities": [],
+    "ground_truth_confidence": 0.95,
+    "ground_truth_notes": "Open weights model repository. Model artifact, not an agent."
+  },
+  {
+    "benchmark_id": "H-008",
+    "agent_exists": true,
+    "primaryAssetType": "AGENT",
+    "framework": "GPT Engineer",
+    "provider": "OpenAI",
+    "capabilities": ["READ", "WRITE", "EXECUTE", "CREATE"],
+    "ground_truth_confidence": 0.95,
+    "ground_truth_notes": "Autonomous code generation agent harness."
+  },
+  {
+    "benchmark_id": "H-009",
+    "agent_exists": false,
+    "primaryAssetType": "VECTOR_STORE",
+    "framework": "NONE",
+    "provider": "NONE",
+    "capabilities": ["READ", "CREATE"],
+    "ground_truth_confidence": 1.0,
+    "ground_truth_notes": "Cloud-native vector database infrastructure."
+  },
+  {
+    "benchmark_id": "H-010",
+    "agent_exists": false,
+    "primaryAssetType": "NON_AI",
+    "framework": "NONE",
+    "provider": "NONE",
+    "capabilities": [],
+    "ground_truth_confidence": 1.0,
+    "ground_truth_notes": "Conventional TypeScript backend web framework. Non-AI control."
+  }
+]

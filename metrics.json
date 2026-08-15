@@ -1,0 +1,47 @@
+{
+  "agent_detection": {
+    "total_repos": 15,
+    "true_positives": 8,
+    "true_negatives": 4,
+    "false_positives": 3,
+    "false_negatives": 0,
+    "precision_pct": 73,
+    "recall_pct": 100,
+    "f1_score_pct": 84
+  },
+  "capability_inference": {
+    "cap_true_positives": 15,
+    "cap_false_positives": 7,
+    "cap_false_negatives": 14,
+    "critical_capability_false_positives": 6,
+    "capability_precision_pct": 68,
+    "capability_recall_pct": 52,
+    "capability_false_positive_rate_pct": 32
+  },
+  "confidence_calibration": {
+    "0.50-0.69": {
+      "claims": 0,
+      "correct": 0,
+      "incorrect": 0,
+      "unknown": 0
+    },
+    "0.70-0.79": {
+      "claims": 0,
+      "correct": 0,
+      "incorrect": 0,
+      "unknown": 0
+    },
+    "0.80-0.89": {
+      "claims": 6,
+      "correct": 4,
+      "incorrect": 2,
+      "unknown": 0
+    },
+    "0.90-1.00": {
+      "claims": 5,
+      "correct": 4,
+      "incorrect": 1,
+      "unknown": 0
+    }
+  }
+}
