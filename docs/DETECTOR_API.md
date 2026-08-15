@@ -29,7 +29,7 @@ export interface DiscoveredAssetSignal {
   }>;
 }
 
-export interface TrustAgentDetector {
+export interface TaidyupDetector {
   id: string;
   name: string;
   supportedLanguages: string[];

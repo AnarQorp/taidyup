@@ -35,7 +35,7 @@ It summarizes the declared architecture, observable technical evidence, supporte
 
 ## TECHNICAL FINDINGS & CONFLICTS
 ### 💥 [CRITICAL] Undeclared Critical Capability: EXECUTE
-Static scanner observed agent-bound critical capability EXECUTE on resource "system:bash" that was NOT declared in trustagent.json.
+Static scanner observed agent-bound critical capability EXECUTE on resource "system:bash" that was NOT declared in taidyup.json.
 ```
 
 ---
