@@ -1,2 +1,0 @@
-[tool.poetry.dependencies]
-crewai = "^0.30.0"

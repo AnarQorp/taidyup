@@ -1,2 +1,0 @@
-[tool.poetry.dependencies]
-pyautogen = "^0.2.27"

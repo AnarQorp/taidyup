@@ -28,8 +28,9 @@ taidyup-report*.json
 TECHNICAL_PASSPORT.md
 taidyup.sarif
 
-# Benchmarks external clones
-benchmarks/external/repos/
+# Benchmarks & Internal scripts
+benchmarks/
+scripts/
 
 # Temporary files & Caches
 .tmp/

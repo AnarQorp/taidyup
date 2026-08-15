@@ -1,3 +1,0 @@
-[tool.poetry.dependencies]
-crewai = "^0.30.0"
-ollama = "^0.1.7"

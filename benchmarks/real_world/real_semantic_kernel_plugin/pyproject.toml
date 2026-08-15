@@ -1,2 +1,0 @@
-[tool.poetry.dependencies]
-semantic-kernel = "^1.1.0"
