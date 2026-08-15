@@ -1,17 +1,41 @@
-# tAIdyup — Identidad de Marca Oficial
+# tAIdyup — Canonical Brand Identity & Messaging Architecture
 
 ![tAIdyup Identidad de Marca Oficial](assets/brand/taidyup_brand_identity_canonical.jpg)
 
-> **"ALINEAMOS LO QUE PROMETES CON LO QUE PRUEBAS"**  
-> *Tecnología con conciencia.*
+> **"Know your AI while you build it."**
 
 ---
 
-## 🪵 La Metáfora Canónica de Pinocho: Creación, Descubrimiento y Alineación
+## 🎯 Canonical Brand Messaging Architecture
 
-Como Pinocho, tu IA nace de algo que creas con intención. A medida que se desarrolla y enfrenta la realidad, lo que ha llegado a ser puede no coincidir perfectamente con lo que originalmente se entendía o declaraba. tAIdyup ayuda a visibilizar esa distancia, contrastar la intención con la evidencia técnica observable y ayudar al desarrollador a entender qué ha construido realmente.
+### Primary Tagline
+`Know your AI while you build it.`
 
-### El Flujo Canónico de Progreso
+### Product Descriptor
+`The local-first developer tool for understanding, checking and evidencing what your AI can actually do.`
+
+### Supporting Functional Message
+`Align what you declare with what you build.`
+
+*(Note: The supporting functional message is used in feature explanations, diagrams, and product copy, but is not the primary brand tagline).*
+
+---
+
+## 🏗️ Product Positioning Hierarchy
+
+1. **Developer Tool:** First and foremost a developer tool for AI projects used during active development.
+2. **Understand While Building:** Enables developers to know what their AI system is becoming while coding.
+3. **Technical Evidence & Reconciliation:** Observes, contrasts, and reconciles declared authority with AST code implementation.
+4. **Provenance & Evidence Generation:** Exports audit-ready technical passports, JSON reports, and SARIF static analysis output.
+5. **Delivery & Governance Workflows:** Supports PR code reviews, client handoffs, and regulatory compliance disclosures as natural downstream outcomes.
+
+---
+
+## 🪵 Canonical Pinocchio Metaphor: Creation, Discovery & Understanding
+
+Like Pinocchio, your AI begins as something you create with intention. As it develops and encounters the real world, what it has become may not perfectly match what was originally understood or declared. tAIdyup helps make that distance visible, contrast intention with technical evidence, and help the developer understand what they have actually built.
+
+### The Canonical Progression
 1. **CREAS:** Tu idea y tu intención.
 2. **GUÍAS:** Le das forma y lo desarrollas.
 3. **CONTRASTAS:** tAIdyup contrasta lo esperado/declarado con la realidad técnica observable.
@@ -19,25 +43,16 @@ Como Pinocho, tu IA nace de algo que creas con intención. A medida que se desar
 
 ---
 
-## 📏 La Nariz como Metáfora de la Distancia (No de la Deshonestidad)
+## 📏 The Nose as a Metaphor for Distance (Not Dishonesty)
 
-- **Desalineación / Distancia:** Cuando existe distancia entre lo declarado o esperado y lo que la evidencia técnica realmente muestra en el código, esa distancia se hace visible. La nariz representa esa **brecha observable**, nunca una deshonestidad ni una acusación.
-- **Alineación:** Cuando la declaración, la expectativa y la evidencia técnica corresponden, la distancia desaparece. El resultado no es "el desarrollador decía la verdad", sino que **el desarrollador adquiere un conocimiento mejor respaldado por evidencia sobre su propio sistema**.
-
----
-
-## 📐 Significados Clave
-- **Creación Intencional:** Nace del propósito con el que construyes.
-- **Contraste Técnico:** Verificas y contrastas intenciones con evidencia observable, sin dar nada por hecho.
-- **Alineación:** La intención y la implementación se corresponden con claridad.
-- **Confianza Basada en Evidencia:** Un resultado sólido y verificable sobre el que tomar decisiones.
-- **Responsabilidad:** Gobernanza técnica con ética, transparencia y rigor.
+- **Distance (Brecha Observable):** When there is distance between what is declared or expected and what technical code evidence shows, that distance becomes visible. The nose represents that **observable gap**, never dishonesty, deception, or an accusation.
+- **Alignment:** When declaration, expectation, and technical evidence correspond, the distance disappears. The result is not "the developer was telling the truth", but rather: **the developer has better evidence-backed knowledge of what they built**.
 
 ---
 
-## 🛡️ Principio Epistémico del Producto
+## 🛡️ Product Epistemic Principle
 
-tAIdyup **observa**.  
+tAIdyup **observes**.  
 tAIdyup **contrasta**.  
 tAIdyup **reconcilia evidencia**.  
 tAIdyup **visibiliza discrepancias**.  
@@ -48,10 +63,11 @@ tAIdyup **NO** acusa a los desarrolladores de mentir o engañar.
 tAIdyup **NO** convierte observaciones técnicas en juicios morales.  
 tAIdyup **NO** emite determinaciones automáticas de cumplimiento legal.
 
-Este principio es plenamente coherente con el modelo epistémico del motor:
+Coherente con los estados epistémicos del motor:
 `SUPPORTED` · `UNVERIFIED` · `CONFLICT` · `UNDECLARED_OBSERVATION` · `UNKNOWN`
 
 ---
 
-**tAIdyup te ayuda a crear IA en la que puedes confiar.**  
-*ORDEN · VERDAD · CLARIDAD · CONFIANZA*
+## 🖼️ Canonical Visual Asset Status
+- **Visual Composition & Design:** 100% Preserved (`docs/assets/brand/taidyup_brand_identity_canonical.jpg`).
+- **Text Revision Status:** Text-only visual revision remains **PENDING** to prevent visual drift from the approved artwork.

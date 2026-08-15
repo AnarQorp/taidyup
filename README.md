@@ -4,9 +4,7 @@
 
 ### Know your AI while you build it.
 
-**Build with evidence. Understand what changes. Ship what you intended.**
-
-`tAIdyup` is an open-source, local-first development tool that helps you understand, track and prove what your AI system is actually becoming as you build it.
+**The local-first developer tool for understanding, checking and evidencing what your AI can actually do.**
 
 </div>
 
