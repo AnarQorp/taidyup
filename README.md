@@ -648,6 +648,20 @@ Runtime evidence collection is part of the project's future direction.
 
 ---
 
+## 🧪 Early Alpha — Help us test tAIdyup on real AI projects
+
+We are looking for developers willing to run `tAIdyup` against AI projects we haven't seen before.
+
+Found a false positive? A capability we missed? A framework we don't understand yet? Tell us:
+
+* 🐞 [Report a CLI bug](https://github.com/AnarQorp/taidyup/issues/new?template=bug_report.md)
+* 🔍 [Report detection feedback or false positive](https://github.com/AnarQorp/taidyup/issues/new?template=detection_feedback.md)
+* 🔌 [Request framework or detector support](https://github.com/AnarQorp/taidyup/issues/new?template=framework_request.md)
+* 💡 [Suggest a feature](https://github.com/AnarQorp/taidyup/issues/new?template=feature_request.md)
+* 💬 [Share your Early Alpha experience ("I tried tAIdyup")](https://github.com/AnarQorp/taidyup/issues/new?template=alpha_feedback.md)
+
+---
+
 # Quick start
 
 > **tAIdyup 0.1.0-alpha.1 is an early release. Interfaces and schemas may evolve.**
