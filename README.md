@@ -658,10 +658,16 @@ Runtime evidence collection is part of the project's future direction.
 
 ### Install
 
-For the current Alpha package:
+For the current Alpha release:
 
 ```bash
-npm install -g taidyup-0.1.0-alpha.1.tgz
+npm install -g taidyup@alpha
+```
+
+Once stable releases are published, standard installation will be:
+
+```bash
+npm install -g taidyup
 ```
 
 ### Initialize your AI project
