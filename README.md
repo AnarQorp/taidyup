@@ -532,7 +532,7 @@ tAIdyup can also provide a handoff to the official European Commission complianc
 
 tAIdyup does **not**:
 
-* **not** declare that your AI system is EU AI Act compliant;
+* declare that your AI system is EU AI Act compliant;
 * automatically classify systems as high-risk or low-risk;
 * replace contextual assessment under Article 6 / Annex III;
 * issue legal certifications;

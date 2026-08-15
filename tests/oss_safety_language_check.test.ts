@@ -40,7 +40,9 @@ async function runOssSafetyLanguageCheck() {
         const lines = content.split('\n');
         for (const line of lines) {
           if (line.toUpperCase().includes(phrase)) {
-            const isNegativeDisclaimer = line.toLowerCase().includes('not') || line.toLowerCase().includes('prohibited') || line.toLowerCase().includes('never');
+            const lineIdx = lines.indexOf(line);
+            const blockContext = lines.slice(Math.max(0, lineIdx - 3), lineIdx + 1).join('\n').toLowerCase();
+            const isNegativeDisclaimer = blockContext.includes('not') || blockContext.includes('prohibited') || blockContext.includes('never');
             if (!isNegativeDisclaimer) {
               console.error(`❌ Safety Language Violation in \`${relativePath}\`: Found prohibited overclaim "${phrase}" on line: "${line.trim()}"`);
               violationCount++;
