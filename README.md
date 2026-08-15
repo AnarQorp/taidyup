@@ -1,10 +1,22 @@
 <div align="center">
 
+<img src="docs/assets/brand/taidyup-logo.png" alt="tAIdyup Logo" width="440" />
+
 # tAIdyup
 
 ### Know your AI while you build it.
 
 **The local-first developer tool for understanding, checking and evidencing what your AI can actually do.**
+
+[![npm alpha](https://img.shields.io/npm/v/taidyup/alpha?color=2563eb&label=npm%20alpha)](https://www.npmjs.com/package/taidyup)
+[![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![node](https://img.shields.io/badge/node-%3E%3D18-green.svg)](package.json)
+[![privacy](https://img.shields.io/badge/privacy-100%25%20local--first-emerald.svg)](#privacy--local-first-guarantee)
+[![build](https://img.shields.io/badge/tests-100%25%20passing-brightgreen.svg)](#alpha-1-verification)
+
+```bash
+npm install -g taidyup@alpha
+```
 
 </div>
 
@@ -198,335 +210,100 @@ and surface:
 ```text
 CRITICAL — Undeclared Critical Capability
 
-Static scanner observed agent-bound critical capability
-EXECUTE on resource "Terminal / OS Shell"
-that was NOT declared in the project manifest.
-
-Observed:
-  src/script.ts
-```
-
-Now the question becomes actionable:
-
-**Should the agent have this authority?**
-
-If yes, declare it.
-
-If no, remove it.
-
-If you don't know, investigate it.
-
-What matters is that it is no longer invisible.
-
----
-
-# A development tool, not an after-the-fact questionnaire
-
-Traditional compliance work often starts late.
-
-The system is already built and somebody has to reconstruct:
-
-* what components it uses;
-* what capabilities exist;
-* what was intended;
-* what changed;
-* where those capabilities originate;
-* and what evidence supports the answers.
-
-tAIdyup approaches the problem from the opposite direction.
-
-```text
-DECLARE → OBSERVE → RECONCILE → EVIDENCE
-```
-
-Make technical understanding part of building the AI itself.
-
-That makes tAIdyup useful long before anybody asks you for a compliance report.
-
----
-
-# Build → Check → Understand → Repeat
-
-tAIdyup Alpha 1 provides five primary CLI operations:
-
-```bash
-taidyup init
-taidyup scan .
-taidyup validate .
-taidyup report
-taidyup diff <previous-report> <current-report>
-```
-
-They support different moments in the development lifecycle.
-
-### Start
-
-```bash
-taidyup init
-```
-
-Create the declaration manifest that describes the intended system.
-
-### Develop
-
-```bash
-taidyup scan .
-```
-
-Inspect the project for observable AI assets, framework bindings, tools and capabilities.
-
-### Check
-
-```bash
-taidyup validate .
-```
-
-Reconcile declared authority against observable implementation.
-
-### Understand change
-
-```bash
-taidyup diff previous-report.json current-report.json
-```
-
-See how the system's authority changed between two states.
-
-### Prove
-
-```bash
-taidyup report
-```
-
-Generate portable technical evidence from the reconciled state.
-
----
-
-# What authority did your AI gain between releases?
-
-This is one of the questions tAIdyup is designed to make answerable.
-
-Imagine version 1 of your agent can read project data.
-
-Version 2 introduces process execution.
-
-Compare both tAIdyup reports:
-
-```bash
-taidyup diff taidyup-report-v1.json taidyup-report-v2.json
-```
-
-Example Alpha 1 output:
-
-```text
-TAIDYUP AUTHORITY DIFF
-
-[NEW CAPABILITIES]
-
-  + agent:...:EXECUTE:Terminal / OS Shell
-```
-
-That creates a different way of reviewing AI changes.
-
-A normal code diff asks:
-
-> **What code changed?**
-
-tAIdyup can help you ask:
-
-> **What authority changed because the code changed?**
-
-That's useful during development.
-
-It's useful during review.
-
-And it's especially useful before a release reaches a client or production environment.
-
----
-
-# Five epistemic states
-
-tAIdyup deliberately avoids pretending to know more than the available evidence supports.
-
-### `SUPPORTED`
-
-Declared authority is supported by observable implementation evidence.
-
-### `UNVERIFIED`
-
-A declaration exists, but available evidence cannot verify it.
-
-### `CONFLICT`
-
-Observed implementation contradicts an explicit declaration.
-
-### `UNDECLARED_OBSERVATION`
-
-Relevant authority is observable in the implementation but was not declared.
-
-### `UNKNOWN`
-
-Available evidence is insufficient or ambiguous.
-
-This is the core epistemic principle behind tAIdyup:
-
-> **Evidence before claims.**
-
-When tAIdyup doesn't know, it should say that it doesn't know.
-
----
-
-# Evidence should tell you where it came from
-
-A finding without provenance isn't enough.
-
-tAIdyup connects reconciled claims to their technical origin.
-
-```text
-taidyup.json
-agents[0].capabilities[0]
-        │
-        │  CANNOT EXECUTE
-        ▼
-     CONFLICT
-        ▲
-        │  EXECUTE observed
-        │
-src/agent.ts
-```
-
-That allows developers to move from:
-
-> "Something might be wrong."
-
-to:
-
-> "This declaration conflicts with this observable implementation, here."
-
-Provenance also travels into generated technical reports.
-
----
-
-# Your project's evolving technical record
-
-tAIdyup records evidence locally using a SQLite-backed SHA-256 hash chain.
-
-Evidence records incorporate the preceding record's hash, allowing chain verification to detect historical mutation, insertion or deletion.
-
-This creates the foundation for maintaining a technical record as the AI project evolves.
-
-But tAIdyup does not pretend that this proves more than it does.
-
-The Alpha 1 evidence chain is:
-
-**a local cryptographic hash chain.**
-
-It is not:
-
-* a blockchain;
-* an external notarization service;
-* a consensus mechanism;
-* a trusted timestamp authority.
-
-And an attacker with sufficient database write access could recalculate the chain without additional external trust or key-management mechanisms.
-
-**Evidence should never claim more than it proves.**
-
----
-
-# Technical Passports
-
-When you need to communicate the technical state of the system, run:
-
-```bash
-taidyup report
-```
-
-tAIdyup generates:
-
-```text
-TECHNICAL_PASSPORT.md
-```
-
-The passport contains the reconciled technical state of the inspected project.
-
-Example:
-
-```text
-TAIDYUP TECHNICAL PASSPORT & VALIDATION REPORT
-
-Project: customer-support-app
-
-SUMMARY METRICS
-
-Total Claims Evaluated:            4
-Supported Implementation Claims:  0
-Unverified Claims:                 2
-Declaration Conflicts:             1
-Undeclared Observations:           0
-Critical Governance Findings:      1
-
-
-🚨 CANNOT EXECUTE Terminal / OS Shell
-
-Status:      CONFLICT
-Source:      DECLARATION
-Confidence:  95%
+Observation:
+  EXECUTE on Terminal / OS Shell
 
 Provenance:
-  taidyup.json:agents[0].capabilities[0]
   src/agent.ts
 ```
 
-The Technical Passport is designed to travel with the project as technical evidence for developers, clients and technical review processes.
+That allows you to decide intentionally:
+
+* Should this capability be removed?
+* Or should the project declaration be updated to reflect it?
+
+Without tAIdyup, that capability might have remained unnoticed until release.
 
 ---
 
-# From development evidence to compliance evidence
+# The 5 Epistemic States of tAIdyup
 
-Compliance shouldn't require rediscovering how an AI system works after it has already been built.
+When tAIdyup runs `validate`, every claim is classified into one of 5 distinct epistemic states:
 
-By continuously making intended authority, observable implementation, changes and provenance explicit, tAIdyup creates technical evidence that can later support governance and compliance workflows.
+| Epistemic State | Meaning | Action Needed |
+| :--- | :--- | :--- |
+| **`SUPPORTED`** | Manifest claim is directly matched by compatible AST code evidence. | ✅ None. Implementation aligns with declaration. |
+| **`UNVERIFIED`** | Manifest claim lacks code evidence in the static AST scan. | ⚠️ Review. Claim may depend on external or runtime code. |
+| **`CONFLICT`** | Manifest declared prohibition (`CANNOT`) is contradicted by active code. | 🚨 Fix code or update declaration to resolve contradiction. |
+| **`UNDECLARED_OBSERVATION`** | Active critical capability observed in code but omitted from manifest. | 🔍 Review. Intended authority or accidental capability leak? |
+| **`UNKNOWN`** | Static evidence is ambiguous or incomplete. | ❓ Further inspection or runtime telemetry needed. |
 
-That distinction is important:
+---
 
-```text
-DEVELOP
-   │
-   │ understand the system
-   ▼
-EVIDENCE
-   │
-   │ preserve what can be demonstrated
-   ▼
-DELIVER / REVIEW / AUDIT
-   │
-   │ provide technical inputs
-   ▼
-COMPLIANCE
+# Track authority changes over time: `taidyup diff`
+
+AI applications evolve continuously.
+
+When you update a dependency, add an agent tool, or refactor logic, compare your previous release report with your current analysis:
+
+```bash
+taidyup diff base-report.json target-report.json
 ```
 
-tAIdyup operates primarily in the technical layers.
+Output:
 
-Legal determination remains where it belongs.
+```text
+TAIDYUP AUTHORITY DIFF
+Base:   2026-08-15T20:27:13.911Z
+Target: 2026-08-15T20:27:14.075Z
+
+[NEW CAPABILITIES]
+  + agent:asset-a2c42e7b:EXECUTE:Terminal / OS Shell
+```
+
+You immediately see what authority changed between builds.
 
 ---
 
-# EU AI Act
+# What tAIdyup generates
 
-tAIdyup is being developed with the European AI governance landscape in mind, including the EU AI Act.
+When you run `taidyup report`, tAIdyup generates 3 evidence artifacts in your project:
 
-Alpha 1 can help developers:
+### 1. `taidyup-report.json`
+Complete machine-readable audit report containing claim reconciliation matrix, capability bindings, and source provenance.
 
-* document intended AI capabilities;
-* identify observable capabilities in code;
-* detect contradictions and undeclared authority;
-* preserve technical provenance;
-* generate evidence-backed technical documentation;
-* support transparency-oriented engineering workflows.
+### 2. `TECHNICAL_PASSPORT.md`
+Human-readable technical passport summarizing agent assets, declared vs observed capabilities, and evidence findings for clients or team leads.
 
-tAIdyup can also provide a handoff to the official European Commission compliance checker tool for regulatory assessment.
+### 3. `taidyup.sarif`
+OASIS SARIF v2.1.0 static analysis report compatible with **GitHub Code Scanning** and CI/CD security tab integration (`github/codeql-action/upload-sarif@v3`).
 
-### What tAIdyup does not do
+---
+
+# Supported Framework Ecosystems
+
+tAIdyup static analysis currently supports automatic capability detection for:
+
+* **LangChain / LangGraph** (Python & TypeScript)
+* **CrewAI** (Python)
+* **AutoGen** (Python)
+* **LlamaIndex** (Python & TypeScript)
+* **Semantic Kernel** (Python & C#)
+* **MCP — Model Context Protocol** (`mcp.json` servers & tool schemas)
+
+---
+
+# Privacy & Local-First Guarantee
+
+tAIdyup is designed with local-first privacy guarantees:
+
+* **100% Local Execution:** 0 outbound network requests during analysis.
+* **0 Code Uploads:** Your source code never leaves your workstation or CI server.
+* **0 Telemetry:** No tracking, metrics, or external analytics calls.
+
+---
+
+# What tAIdyup does not do
 
 tAIdyup does **not**:
 
@@ -539,110 +316,6 @@ tAIdyup does **not**:
 Code can provide evidence about technical properties.
 
 Code alone cannot determine the complete legal context in which an AI system operates.
-
----
-
-# Local-first
-
-Your source code is often one of the most sensitive assets in your organization.
-
-Understanding your AI shouldn't require uploading it somewhere else.
-
-Alpha 1 performs normal analysis locally.
-
-```text
-taidyup init
-taidyup scan
-taidyup validate
-taidyup report
-taidyup diff
-```
-
-These operations:
-
-* make no outbound HTTP/HTTPS/WebSocket requests;
-* upload no inspected source code;
-* send no telemetry;
-* perform no automated update checks;
-* require no tAIdyup SaaS backend.
-
-Your code stays on your machine.
-
----
-
-# AI ecosystems detected in Alpha 1
-
-Current detector coverage includes:
-
-| Ecosystem       | Detection | Fixture tested | Adversarial tested |
-| --------------- | --------: | -------------: | -----------------: |
-| LangChain       |         ✅ |              ✅ |                  ✅ |
-| LangGraph       |         ✅ |              ✅ |                  ✅ |
-| CrewAI          |         ✅ |              ✅ |                  ✅ |
-| AutoGen         |         ✅ |              ✅ |                  ✅ |
-| LlamaIndex      |         ✅ |              ✅ |                  ✅ |
-| Semantic Kernel |         ✅ |              ✅ |                  ✅ |
-| MCP             |         ✅ |              ✅ |                  ✅ |
-
-Framework detection does not imply that every possible runtime behavior can be inferred through static analysis.
-
----
-
-# SARIF and existing development workflows
-
-tAIdyup exports **OASIS SARIF 2.1.0**:
-
-```text
-taidyup.sarif
-```
-
-Findings such as declaration conflicts and undeclared critical capabilities can therefore enter existing code-scanning workflows.
-
-Example:
-
-```json
-{
-  "id": "TA001",
-  "name": "DeclarationConflict",
-  "shortDescription": {
-    "text": "Manifest declaration contradicts observed code binding"
-  },
-  "defaultConfiguration": {
-    "level": "error"
-  }
-}
-```
-
-Alpha 1 SARIF output is compatible with GitHub Code Scanning through:
-
-```text
-github/codeql-action/upload-sarif@v3
-```
-
-This allows tAIdyup findings to become part of the engineering workflow instead of living in a separate compliance silo.
-
----
-
-# What Alpha 1 cannot see
-
-Knowing the boundaries of evidence is part of tAIdyup's design.
-
-Static analysis cannot reliably determine:
-
-* future user inputs;
-* dynamically generated prompts;
-* every runtime branch;
-* behavior of remote services;
-* dynamically loaded code;
-* deployment context;
-* legal purpose;
-* complete regulatory classification.
-
-Alpha 1 therefore does not perform dynamic sandbox execution.
-
-When static evidence isn't enough, tAIdyup preserves that uncertainty rather than silently turning it into certainty.
-
-Runtime evidence collection is part of the project's future direction.
 
 ---
 
@@ -730,94 +403,24 @@ The current release has passed:
 ✓ TrustAgent legacy audit — 0 remaining public references
 ```
 
-Package:
-
-```text
-taidyup-0.1.0-alpha.1.tgz
-```
-
-SHA-256:
-
-```text
-9a0b8b8a0df23f9f891a5bcd60cbc1790281af919de25299e416bf4b9b0694fe
-```
+Package details: `taidyup@0.1.0-alpha.1` on npm.
 
 ---
 
-# Where tAIdyup is going
+# Brand & Inspiration
 
-Alpha 1 establishes the first part of a larger idea:
+tAIdyup's visual identity is inspired by Pinocchio and handcrafted wooden block mechanics — representing creation, development, discovery, and evidence-backed understanding.
 
-> **AI systems should carry an evolving, evidence-backed technical understanding of what they are and what authority they possess.**
-
-Today tAIdyup can reconcile declared authority with statically observable implementation.
-
-The next steps explore how that evidence can follow increasingly dynamic AI systems throughout their lifecycle.
-
-### Runtime evidence
-
-Extend static observations with runtime telemetry so future tAIdyup versions can incorporate evidence about what AI systems actually do during execution — while continuing to distinguish observation from inference.
-
-### Open Agent Trust Manifest
-
-Explore evolution of the current declaration format into an interoperable specification for describing AI and agent authority.
-
-### Detector Plugin SDK
-
-Allow frameworks and developer communities to extend tAIdyup's detection model without coupling every ecosystem to the core engine.
-
-And as AI governance evolves, the same technical evidence layer can support additional regulatory, assurance and audit workflows without turning the engineering tool itself into a legal oracle.
-
----
-
-# The idea
-
-AI development is changing.
-
-We are no longer building software that only responds to inputs.
-
-AI systems increasingly:
-
-**read.
-write.
-reason.
-call tools.
-access services.
-use credentials.
-execute.
-delegate.
-act.**
-
-That makes authority part of AI engineering.
-
-Developers need to understand that authority while they build — not reconstruct it after something goes wrong or somebody asks for an audit.
-
-So tAIdyup asks continuously:
-
-> **What are we saying this AI can do?**
-
-> **What does the implementation show that it can do?**
-
-> **Where does that authority come from?**
-
-> **What changed?**
-
-> **What evidence do we have?**
-
-And when it's time to ship:
-
-> **Are we delivering the AI we intended to build?**
+To learn more about the brand identity, materials, and positioning, see [docs/BRAND_IDENTITY.md](docs/BRAND_IDENTITY.md).
 
 ---
 
 <div align="center">
 
-## Build AI with evidence, not assumptions.
+<img src="docs/assets/brand/taidyup-mark.png" alt="tAIdyup Mark" width="80" />
 
 ### Know your AI while you build it.
 
-**tAIdyup**
-
-Open source · Local-first · Alpha
+**tAIdyup** — Open source · Local-first · Alpha
 
 </div>
