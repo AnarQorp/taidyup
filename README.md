@@ -55,6 +55,21 @@ And when somebody eventually asks:
 
 **tAIdyup makes those questions part of development.**
 
+## Try it in 60 seconds
+
+Requires Node.js 18+.
+
+```bash
+npm install -g taidyup@alpha
+cd your-ai-project
+taidyup init --accept
+taidyup validate .
+```
+
+This runs locally, creates `taidyup.json`, scans the project, and prints the first reconciliation summary: supported, unverified, conflicting, undeclared, and unknown capabilities.
+
+`--accept` turns the generated draft into a declaration for this first trial. Review `taidyup.json` before relying on the validation or generated evidence. tAIdyup is an Early Alpha; its static analysis can miss capabilities or report false positives, and its output is not a certification or legal compliance assessment.
+
 ```text
         BUILD
           │
@@ -360,8 +375,10 @@ npm install -g taidyup
 ```bash
 cd your-ai-project
 
-taidyup init
+taidyup init --accept
 ```
+
+This creates `taidyup.json` as a declaration. Review it before relying on validation or generated evidence. Run `taidyup init` without `--accept` if you prefer to generate a non-canonical `taidyup.json.draft` first.
 
 ### Inspect it
 
