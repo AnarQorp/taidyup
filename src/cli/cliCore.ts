@@ -25,6 +25,27 @@ export class CliCore {
 
   public static async execute(options: CliOptions): Promise<number> {
     try {
+      if (['init', 'scan', 'validate', 'report'].includes(options.command)) {
+        const isRemoteTarget = /^[a-z][a-z0-9+.-]*:\/\//i.test(options.targetPath) ||
+          /^[^/@\s]+@[^:/\s]+:.+/.test(options.targetPath);
+        if (isRemoteTarget) {
+          console.error(`❌ Remote URL or Git reference targets are not supported in tAIdyup Alpha: \`${options.targetPath}\`.`);
+          console.error(`👉 Provide an existing local directory/workspace. tAIdyup will not clone or fetch remote code.`);
+          return 2;
+        }
+        const targetDir = path.resolve(options.targetPath);
+        if (!fs.existsSync(targetDir)) {
+          console.error(`❌ Local target does not exist: \`${targetDir}\`.`);
+          console.error(`👉 tAIdyup Alpha expects an existing local directory/workspace.`);
+          return 2;
+        }
+        if (!fs.statSync(targetDir).isDirectory()) {
+          console.error(`❌ Local target is not a directory: \`${targetDir}\`.`);
+          console.error(`👉 tAIdyup Alpha expects a local directory/workspace, not a file.`);
+          return 2;
+        }
+      }
+
       switch (options.command) {
         case 'init':
           return await this.handleInit(options);

@@ -20,7 +20,7 @@
     "start": "node dist/backend/server.js",
     "server": "tsx src/backend/server.ts",
     "taidyup": "node bin/taidyup.js",
-    "test": "npx tsx tests/trust_kernel_adversarial_suite.test.ts && npx tsx tests/developer_fixtures_runner.ts"
+    "test": "npx tsx tests/trust_kernel_adversarial_suite.test.ts && npx tsx tests/developer_fixtures_runner.ts && npx tsx tests/cli_target_validation.test.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",
