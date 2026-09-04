@@ -16,8 +16,28 @@ const claims: Claim[] = states.map((status, index) => ({
   provenance: [
     ...(status === 'UNDECLARED_OBSERVATION' ? [] : [{ sourceType: 'DECLARATION' as const, artifact: '/test/taidyup.json', location: `agents[0].capabilities[${index}]`, evidenceId: 'test-evidence-declaration' }]),
     ...(['SUPPORTED', 'CONFLICT', 'UNDECLARED_OBSERVATION'].includes(status) ? [{ sourceType: 'STATIC' as const, artifact: '/test/src/agent.ts', location: `line:${index + 1}`, collectorId: 'test-only-collector', evidenceId: 'test-evidence-static' }] : [])
-  ]
+  ],
+  ...(status === 'UNVERIFIED' ? {
+    constraints: { approval_required: true },
+    assessment: {
+      overall: 'UNVERIFIED' as const,
+      subject: 'UNVERIFIED' as const,
+      predicate: 'SATISFIED' as const,
+      action: 'SATISFIED' as const,
+      resource: 'UNVERIFIED' as const,
+      resourceRelation: 'UNRESOLVED' as const,
+      constraints: { approval_required: 'UNVERIFIED' as const },
+      binding: 'UNBOUND' as const,
+      evidenceRefs: ['test-evidence-static'],
+      diagnostics: []
+    }
+  } : {})
 }));
+
+claims[1].provenance.push({
+  sourceType: 'STATIC', artifact: '/test/src/agent.ts', location: 'line:1',
+  snippet: 'agent output -> execution sink', collectorId: 'test-only-collector', evidenceId: 'test-evidence-static'
+});
 
 const evidence: Evidence[] = [
   {
@@ -29,7 +49,7 @@ const evidence: Evidence[] = [
   {
     id: 'test-evidence-static', type: 'STATIC_CAPABILITY_OBSERVATION', sourceType: 'STATIC',
     subject: 'agent:test-only', observedAt: '2026-01-01T00:00:00.000Z', collectorId: 'test-only-collector',
-    collectorVersion: 'test', artifact: '/test/src/agent.ts', location: 'line:1', data: {}, strength: 'AGENT_BOUND', sha256: 'test',
+    collectorVersion: 'test', artifact: '/test/src/agent.ts', location: 'line:1', data: { capability: 'WRITE' }, strength: 'AGENT_BOUND', sha256: 'test',
     provenance: { file: '/test/src/agent.ts', lineRange: '1' }
   }
 ];
@@ -43,7 +63,16 @@ export const uiTrustStatesFixture: LocalProjectAnalysis = {
   },
   subjects: ['agent:test-only'],
   declaredClaims: claims.filter(claim => claim.source === 'DECLARATION'),
-  observedClaims: claims.filter(claim => claim.source === 'STATIC'),
+  observedClaims: [
+    ...claims.filter(claim => claim.source === 'STATIC'),
+    {
+      ...claims[1], source: 'STATIC', status: 'INFERRED', constraints: undefined, assessment: undefined,
+      provenance: [{
+        sourceType: 'STATIC', artifact: '/test/src/agent.ts', location: 'line:1',
+        snippet: 'agent output -> execution sink', collectorId: 'test-only-collector', evidenceId: 'test-evidence-static'
+      }]
+    }
+  ],
   evidence,
   reconciliation: {
     schemaVersion: 'test', timestamp: '2026-01-01T00:00:00.000Z',
