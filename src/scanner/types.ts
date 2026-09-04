@@ -77,6 +77,9 @@ export interface DiscoveredAssetSignal {
   provider: string;
   model: string;
   framework: string;
+  frameworkEvidence?: { file: string };
+  providerEvidence?: { file: string };
+  modelEvidence?: { file: string };
   protocols: string[];
   tools: Array<{ id: string; name: string; category: string; evidenceStrength: EvidenceStrength }>;
   resources: string[];

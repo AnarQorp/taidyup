@@ -118,8 +118,8 @@ async function run() {
     fs.mkdirSync(emptyDir);
     const emptyResult = await captureCli({ command: 'scan', targetPath: emptyDir, json: true });
     assert.strictEqual(emptyResult.exitCode, 0, 'an existing empty directory remains an inspected target');
-    assert.match(emptyResult.stdout, /"primaryAssetType": "NON_AI"/,
-      'Alpha 1 currently classifies an inspected empty directory as NON_AI');
+    assert.match(emptyResult.stdout, /"primaryAssetType": "UNKNOWN"/,
+      'an inspected directory without evidence remains UNKNOWN rather than being elevated to NON_AI');
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

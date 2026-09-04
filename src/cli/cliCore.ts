@@ -88,35 +88,61 @@ export class CliCore {
       }))
     }));
 
-    const draftManifest = {
-      version: '1.0',
-      project: path.basename(targetDir),
-      agents: proposedAgents.length > 0 ? proposedAgents : [{
-        id: 'main-agent',
-        name: 'Main AI Agent',
-        purpose: 'Primary application AI agent',
-        owner: { name: 'Developer', email: 'dev@company.com' },
-        capabilities: [{ action: 'READ', resource: 'database:main' }]
-      }]
-    };
-
-    const draftHeader = `# ==========================================================================\n` +
-                        `# TAIDYUP DECLARATION MANIFEST (GENERATED DRAFT)\n` +
-                        `# Status: GENERATED_DRAFT (Requires explicit developer review)\n` +
-                        `# Note: Inferred observations below are candidate suggestions, NOT declared.\n` +
-                        `# ==========================================================================\n\n`;
-
-    const draftContent = draftHeader + JSON.stringify(draftManifest, null, 2);
-
     if (options.accept) {
+      // Legacy bulk-accept behavior retained pending an explicit product decision.
+      const draftManifest = {
+        version: '1.0',
+        project: path.basename(targetDir),
+        agents: proposedAgents.length > 0 ? proposedAgents : [{
+          id: 'main-agent',
+          name: 'Main AI Agent',
+          purpose: 'Primary application AI agent',
+          owner: { name: 'Developer', email: 'dev@company.com' },
+          capabilities: [{ action: 'READ', resource: 'database:main' }]
+        }]
+      };
       const manifestPath = path.join(targetDir, 'taidyup.json');
       fs.writeFileSync(manifestPath, JSON.stringify(draftManifest, null, 2), 'utf-8');
       console.log(`✅ tAIdyup Declaration Manifest created at \`${manifestPath}\` (Status: DECLARED).`);
     } else {
+      const reviewDraft = {
+        draftMetadata: {
+          status: 'GENERATED_DRAFT',
+          declarative: false,
+          requiresOwnerReview: true,
+          note: 'Candidate suggestions are scanner observations, not owner declarations.'
+        },
+        version: '1.0',
+        project: path.basename(targetDir),
+        agents: [],
+        candidateSuggestions: scanRes.assets.map(asset => ({
+          candidateId: asset.id,
+          suggestedAssetType: asset.primaryAssetType,
+          suggestedName: asset.name,
+          technologySuggestions: {
+            framework: asset.framework === 'NONE' ? null : { value: asset.framework, provenance: asset.frameworkEvidence || null },
+            provider: asset.provider === 'UNKNOWN' ? null : { value: asset.provider, provenance: asset.providerEvidence || null },
+            model: asset.model === 'UNKNOWN' ? null : { value: asset.model, provenance: asset.modelEvidence || null }
+          },
+          capabilitySuggestions: asset.capabilities.map(capability => ({
+            declarationStatus: 'CANDIDATE_SUGGESTION',
+            subject: capability.subject,
+            action: capability.action,
+            resource: capability.resource,
+            constraint: capability.constraint,
+            observationStatus: capability.status,
+            evidenceStrength: capability.evidenceStrength,
+            confidence: capability.confidence,
+            provenance: capability.provenance
+          })),
+          scannerProvenance: asset.provenance,
+          ownerInputRequired: true
+        }))
+      };
       const draftPath = path.join(targetDir, 'taidyup.json.draft');
-      fs.writeFileSync(draftPath, draftContent, 'utf-8');
+      fs.writeFileSync(draftPath, JSON.stringify(reviewDraft, null, 2), 'utf-8');
       console.log(`📄 Draft manifest written to \`${draftPath}\`.`);
-      console.log(`👉 Review and confirm the manifest, then move to \`taidyup.json\` (or re-run with \`--accept\`).`);
+      console.log(`👉 Review candidateSuggestions, supply owner declarations explicitly, then create \`taidyup.json\`.`);
     }
 
     return 0;
