@@ -38,6 +38,7 @@ tmp/
 .cache/
 .eslintcache
 DEVELOPER_FIXTURE_RESULTS.json
+ADVERSARIAL_TEST_MATRIX.json
 
 # IDE & Editor state
 .vscode/

@@ -1,12 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 import { ScannerCore } from '../scanner/scannerCore.js';
-import { ManifestParser } from '../trust-kernel/manifestParser.js';
-import { ReconciliationEngine } from '../trust-kernel/reconciliationEngine.js';
-import { ScannerAdapter } from '../trust-kernel/scannerAdapter.js';
 import { ReportGenerator } from '../trust-kernel/reportGenerator.js';
 import { SarifExporter } from './sarifExporter.js';
 import { DiffEngine } from './diffEngine.js';
+import {
+  analyzeLocalProject,
+  ProjectAnalysisError,
+  validateLocalProjectTarget
+} from '../application/analyzeLocalProject.js';
 
 export interface CliOptions {
   command: string;
@@ -26,22 +28,18 @@ export class CliCore {
   public static async execute(options: CliOptions): Promise<number> {
     try {
       if (['init', 'scan', 'validate', 'report'].includes(options.command)) {
-        const isRemoteTarget = /^[a-z][a-z0-9+.-]*:\/\//i.test(options.targetPath) ||
-          /^[^/@\s]+@[^:/\s]+:.+/.test(options.targetPath);
-        if (isRemoteTarget) {
-          console.error(`❌ Remote URL or Git reference targets are not supported in tAIdyup Alpha: \`${options.targetPath}\`.`);
-          console.error(`👉 Provide an existing local directory/workspace. tAIdyup will not clone or fetch remote code.`);
-          return 2;
-        }
-        const targetDir = path.resolve(options.targetPath);
-        if (!fs.existsSync(targetDir)) {
-          console.error(`❌ Local target does not exist: \`${targetDir}\`.`);
-          console.error(`👉 tAIdyup Alpha expects an existing local directory/workspace.`);
-          return 2;
-        }
-        if (!fs.statSync(targetDir).isDirectory()) {
-          console.error(`❌ Local target is not a directory: \`${targetDir}\`.`);
-          console.error(`👉 tAIdyup Alpha expects a local directory/workspace, not a file.`);
+        try {
+          validateLocalProjectTarget(options.targetPath);
+        } catch (error) {
+          if (!(error instanceof ProjectAnalysisError)) throw error;
+          console.error(`❌ ${error.message}`);
+          if (error.code === 'REMOTE_TARGET_NOT_SUPPORTED') {
+            console.error(`👉 tAIdyup will not clone or fetch remote code.`);
+          } else if (error.code === 'TARGET_NOT_FOUND') {
+            console.error(`👉 tAIdyup Alpha expects an existing local directory/workspace.`);
+          } else if (error.code === 'TARGET_NOT_DIRECTORY') {
+            console.error(`👉 tAIdyup Alpha expects a local directory/workspace, not a file.`);
+          }
           return 2;
         }
       }
@@ -159,47 +157,21 @@ export class CliCore {
   }
 
   private static async handleValidate(options: CliOptions): Promise<number> {
-    const targetDir = path.resolve(options.targetPath);
-    
-    // Check canonical taidyup.json / taidyup.yaml
-    const manifestPathTaidyupJson = path.join(targetDir, 'taidyup.json');
-    const manifestPathTaidyupYaml = path.join(targetDir, 'taidyup.yaml');
-
-    let manifestPath = '';
-    if (fs.existsSync(manifestPathTaidyupJson)) manifestPath = manifestPathTaidyupJson;
-    else if (fs.existsSync(manifestPathTaidyupYaml)) manifestPath = manifestPathTaidyupYaml;
-    else {
-      console.error(`❌ Manifest file \`taidyup.json\` or \`taidyup.yaml\` not found in \`${targetDir}\`.`);
-      console.error(`👉 Run \`taidyup init\` to generate a draft manifest.`);
-      return 2;
-    }
-
-    let manifestData: any;
+    let analysis;
     try {
-      manifestData = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-    } catch (e: any) {
-      console.error(`❌ Manifest Schema Error in \`${manifestPath}\`: ${e.message}`);
+      analysis = await analyzeLocalProject(options.targetPath);
+    } catch (error) {
+      if (!(error instanceof ProjectAnalysisError)) throw error;
+      console.error(`❌ ${error.message}`);
+      error.details.forEach(detail => console.error(`  - ${detail}`));
+      if (error.code === 'MANIFEST_NOT_FOUND') console.error(`👉 Run \`taidyup init\` to generate a draft manifest.`);
       return 2;
     }
-
-    const parseRes = ManifestParser.parseManifest(manifestData, manifestPath);
-    if (!parseRes.isValid) {
-      console.error(`❌ Manifest Validation Errors:`);
-      parseRes.errors.forEach(err => console.error(`  - ${err}`));
-      return 2;
-    }
-
-    const scanRes = await ScannerCore.scanRepository(targetDir);
-    const scannerOutput = ScannerAdapter.adaptScanResult(scanRes);
-
-    const reconcileRes = ReconciliationEngine.reconcile(
-      [...parseRes.claims, ...scannerOutput.claims],
-      [...parseRes.evidences, ...scannerOutput.evidences]
-    );
+    const reconcileRes = analysis.reconciliation;
 
     console.log(`\n================================================================================`);
     console.log(`TAIDYUP VALIDATION REPORT`);
-    console.log(`Project: ${manifestData.project} | Timestamp: ${reconcileRes.timestamp}`);
+    console.log(`Project: ${analysis.project.name} | Timestamp: ${reconcileRes.timestamp}`);
     console.log(`================================================================================`);
     console.log(`• Total Claims:         ${reconcileRes.summary.totalClaims}`);
     console.log(`• Supported:            ${reconcileRes.summary.supportedCount} ✅`);
@@ -236,30 +208,18 @@ export class CliCore {
   }
 
   private static async handleReport(options: CliOptions): Promise<number> {
-    const targetDir = path.resolve(options.targetPath);
+    const targetDir = validateLocalProjectTarget(options.targetPath);
     const outDir = options.outputDir ? path.resolve(options.outputDir) : targetDir;
-
-    const manifestPathTaidyupJson = path.join(targetDir, 'taidyup.json');
-    const manifestPathTaidyupYaml = path.join(targetDir, 'taidyup.yaml');
-
-    let manifestPath = '';
-    if (fs.existsSync(manifestPathTaidyupJson)) manifestPath = manifestPathTaidyupJson;
-    else if (fs.existsSync(manifestPathTaidyupYaml)) manifestPath = manifestPathTaidyupYaml;
-
-    if (!manifestPath || !fs.existsSync(manifestPath)) {
-      console.error(`❌ Manifest not found in \`${targetDir}\`.`);
+    let analysis;
+    try {
+      analysis = await analyzeLocalProject(targetDir);
+    } catch (error) {
+      if (!(error instanceof ProjectAnalysisError)) throw error;
+      console.error(`❌ ${error.message}`);
+      error.details.forEach(detail => console.error(`  - ${detail}`));
       return 2;
     }
-
-    const manifestData = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-    const parseRes = ManifestParser.parseManifest(manifestData, manifestPath);
-    const scanRes = await ScannerCore.scanRepository(targetDir);
-    const scannerOutput = ScannerAdapter.adaptScanResult(scanRes);
-
-    const state = ReconciliationEngine.reconcile(
-      [...parseRes.claims, ...scannerOutput.claims],
-      [...parseRes.evidences, ...scannerOutput.evidences]
-    );
+    const state = analysis.reconciliation;
 
     const jsonPath = path.join(outDir, 'taidyup-report.json');
     const mdPath = path.join(outDir, 'TECHNICAL_PASSPORT.md');
@@ -267,10 +227,10 @@ export class CliCore {
 
     fs.writeFileSync(jsonPath, JSON.stringify(state, null, 2), 'utf-8');
 
-    const markdownReport = ReportGenerator.generateMarkdownReport(manifestData.project, state);
+    const markdownReport = ReportGenerator.generateMarkdownReport(analysis.project.name, state);
     fs.writeFileSync(mdPath, markdownReport, 'utf-8');
 
-    const sarifData = SarifExporter.exportToSarif(manifestData.project, state);
+    const sarifData = SarifExporter.exportToSarif(analysis.project.name, state);
     fs.writeFileSync(sarifPath, JSON.stringify(sarifData, null, 2), 'utf-8');
 
     console.log(`📄 Technical Validation Report generated:`);
