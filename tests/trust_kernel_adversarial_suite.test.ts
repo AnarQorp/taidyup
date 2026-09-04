@@ -211,8 +211,8 @@ async function runAdversarialReconciliationSuite() {
         sha256: 'hash',
         provenance: { file: 'src/agent.ts' }
       }];
-      expectedStatus = 'SUPPORTED';
-      expectedFindingsCount = 1; // Finding for missing oversight evidence
+      expectedStatus = 'UNVERIFIED';
+      expectedFindingsCount = 1; // Missing approval evidence blocks global SUPPORT without creating a conflict.
 
     } else if (i <= 80) {
       // 8. SUBJECT ISOLATION / WRONG SUBJECT (71-80)

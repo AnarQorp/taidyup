@@ -24,7 +24,8 @@ export class ScannerAdapter {
         framework: asset.framework,
         provider: asset.provider,
         toolsCount: asset.tools.length,
-        capabilitiesCount: asset.capabilities.length
+        capabilitiesCount: asset.capabilities.length,
+        componentLocator: asset.componentLocator
       };
       const sha256 = crypto.createHash('sha256').update(JSON.stringify(sanitizedData)).digest('hex');
 
@@ -51,7 +52,11 @@ export class ScannerAdapter {
           capability: capClaim.action,
           resource: capClaim.resource,
           constraint: capClaim.constraint,
-          evidenceStrength: capClaim.evidenceStrength
+          evidenceStrength: capClaim.evidenceStrength,
+          componentLocator: asset.componentLocator,
+          capabilityPathBound: asset.bindingGraph.some(edge =>
+            edge.capability === capClaim.action && edge.provenanceFile === capClaim.provenance.file
+          )
         };
         const capSha256 = crypto.createHash('sha256').update(JSON.stringify(capData)).digest('hex');
 

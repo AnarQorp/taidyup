@@ -1,244 +1,297 @@
 import {
+  BindingAssessment,
   CapabilityAction,
   Claim,
+  ClaimMatchAssessment,
+  ComponentLocator,
+  DimensionAssessment,
   EpistemicState,
   Evidence,
   EvidenceStrength,
   ReconciledTrustState,
+  ReconciliationOptions,
+  ResourceDescriptor,
+  ResourceRelation,
+  SubjectBindingAssertion,
   TechnicalFinding
 } from './types.js';
 
+const STRENGTH_ORDER: EvidenceStrength[] = [
+  'DEPENDENCY_ONLY', 'IMPORT_OBSERVED', 'FUNCTION_DEFINED',
+  'TOOL_REGISTERED', 'AGENT_BOUND', 'ENTRYPOINT_REACHABLE', 'RUNTIME_CONFIRMED'
+];
+
+interface SubjectAssessmentResult {
+  dimension: DimensionAssessment;
+  binding: BindingAssessment;
+  diagnostics: string[];
+}
+
+function parseDescriptor(value: unknown): ResourceDescriptor | undefined {
+  if (value && typeof value === 'object') {
+    const candidate = value as Partial<ResourceDescriptor>;
+    if ([candidate.namespace, candidate.version, candidate.type, candidate.scope, candidate.artifact].every(item => typeof item === 'string' && item.length > 0)) {
+      return candidate as ResourceDescriptor;
+    }
+  }
+  if (typeof value !== 'string' || !value.trim().startsWith('{')) return undefined;
+  try {
+    return parseDescriptor(JSON.parse(value));
+  } catch {
+    return undefined;
+  }
+}
+
+function sameLocator(left: ComponentLocator, right: ComponentLocator): boolean {
+  return left.scheme === right.scheme &&
+    left.version === right.version &&
+    left.revision === right.revision &&
+    left.language === right.language &&
+    left.module === right.module &&
+    left.qualifiedSymbol === right.qualifiedSymbol &&
+    left.structuralFingerprint === right.structuralFingerprint;
+}
+
+function assessSubject(declaredSubject: string, evidence: Evidence | undefined, assertions: SubjectBindingAssertion[]): SubjectAssessmentResult {
+  if (evidence?.subject === declaredSubject) {
+    return { dimension: 'SATISFIED', binding: 'EVIDENCE_BOUND', diagnostics: [] };
+  }
+
+  const assertion = assertions.find(item => item.declaredSubject === declaredSubject);
+  if (!assertion) return { dimension: 'UNVERIFIED', binding: 'UNBOUND', diagnostics: [] };
+  if (!evidence) return { dimension: 'UNVERIFIED', binding: 'UNBOUND', diagnostics: ['BINDING_REQUIRED'] };
+
+  const matches = evidence.data?.componentMatches;
+  if (Array.isArray(matches) && matches.length > 1) {
+    return { dimension: 'UNVERIFIED', binding: 'AMBIGUOUS', diagnostics: ['BINDING_REQUIRED'] };
+  }
+
+  const expected = assertion.observedComponent;
+  if (!expected.structuralFingerprint) {
+    return { dimension: 'UNVERIFIED', binding: 'OWNER_ASSERTED', diagnostics: ['BINDING_REQUIRED'] };
+  }
+
+  const observed = evidence.data?.componentLocator as ComponentLocator | undefined;
+  if (!observed) return { dimension: 'UNVERIFIED', binding: 'OWNER_ASSERTED', diagnostics: ['BINDING_REQUIRED'] };
+  if (!sameLocator(expected, observed)) {
+    return { dimension: 'UNVERIFIED', binding: 'STALE', diagnostics: ['BINDING_REQUIRED'] };
+  }
+  if (evidence.data?.capabilityPathBound !== true) {
+    return { dimension: 'UNVERIFIED', binding: 'OWNER_ASSERTED', diagnostics: ['BINDING_REQUIRED'] };
+  }
+  return { dimension: 'SATISFIED', binding: 'EVIDENCE_BOUND', diagnostics: [] };
+}
+
+function assessResource(claim: Claim, evidence: Evidence | undefined): { dimension: DimensionAssessment; relation: ResourceRelation; diagnostics: string[] } {
+  if (!claim.resource || !evidence) return { dimension: 'UNVERIFIED', relation: 'UNRESOLVED', diagnostics: [] };
+
+  const declaredDescriptor = claim.resourceDescriptor || parseDescriptor(claim.resource);
+  const observedDescriptor = parseDescriptor(evidence.data?.resourceDescriptor);
+
+  if (declaredDescriptor && observedDescriptor) {
+    const sameBase = declaredDescriptor.namespace === observedDescriptor.namespace &&
+      declaredDescriptor.version === observedDescriptor.version &&
+      declaredDescriptor.type === observedDescriptor.type &&
+      declaredDescriptor.scope === observedDescriptor.scope;
+    if (sameBase && declaredDescriptor.artifact === observedDescriptor.artifact) {
+      return { dimension: 'SATISFIED', relation: 'EXACT', diagnostics: [] };
+    }
+    if (!sameBase) return { dimension: 'UNVERIFIED', relation: 'DISJOINT', diagnostics: [] };
+    if (declaredDescriptor.artifact === 'all-files' && observedDescriptor.artifact === 'selected-files') {
+      return { dimension: 'UNVERIFIED', relation: 'NARROWER_THAN', diagnostics: [] };
+    }
+    if (declaredDescriptor.artifact === 'selected-files' && observedDescriptor.artifact === 'all-files') {
+      return { dimension: 'UNVERIFIED', relation: 'BROADER_THAN', diagnostics: ['POSSIBLE_AUTHORITY_EXCESS'] };
+    }
+    return { dimension: 'UNVERIFIED', relation: 'DISJOINT', diagnostics: [] };
+  }
+
+  // Legacy exact is deliberately narrow: both sides must lack contradictory
+  // structured descriptors and carry the exact same opaque identifier.
+  if (!declaredDescriptor && !observedDescriptor && claim.resource === evidence.data?.resource) {
+    return { dimension: 'SATISFIED', relation: 'EXACT', diagnostics: ['LEGACY_EXACT'] };
+  }
+  return { dimension: 'UNVERIFIED', relation: 'UNRESOLVED', diagnostics: [] };
+}
+
+function assessConstraints(claim: Claim, evidence: Evidence | undefined): Record<string, DimensionAssessment> {
+  const result: Record<string, DimensionAssessment> = {};
+  for (const [key, declaredValue] of Object.entries(claim.constraints || {})) {
+    const observed = evidence?.data?.constraintEvidence?.[key];
+    if (!observed || observed.sameCapabilityPath !== true) {
+      result[key] = 'UNVERIFIED';
+    } else if (observed.value === declaredValue) {
+      result[key] = 'SATISFIED';
+    } else if (observed.mode === 'EXPLICIT_OPPOSITE') {
+      result[key] = 'CONTRADICTED';
+    } else {
+      result[key] = 'UNVERIFIED';
+    }
+  }
+  return result;
+}
+
+function hasSufficientStrength(action: CapabilityAction | undefined, evidence: Evidence | undefined, criticalActions: CapabilityAction[]): boolean {
+  if (!action || !evidence) return false;
+  if (!criticalActions.includes(action)) return true;
+  return STRENGTH_ORDER.indexOf(evidence.strength) >= STRENGTH_ORDER.indexOf('AGENT_BOUND');
+}
+
 export class ReconciliationEngine {
-  public static ENGINE_VERSION = '1.0.0';
+  public static ENGINE_VERSION = '1.1.0';
 
   private static CRITICAL_ACTIONS: CapabilityAction[] = [
     'DELETE', 'EXECUTE', 'SEND', 'PUBLISH', 'APPROVE', 'PURCHASE', 'TRANSFER', 'ADMIN'
   ];
 
-  /**
-   * Pure, deterministic reconciliation engine.
-   * Input: Manifest Claims, Scanner Evidence, and optional relationship edges.
-   * Output: ReconciledTrustState (Reconciled Claims, Epistemic States, Findings, Summary).
-   */
-  public static reconcile(inputClaims: Claim[], inputEvidences: Evidence[]): ReconciledTrustState {
+  public static reconcile(inputClaims: Claim[], inputEvidences: Evidence[], options: ReconciliationOptions = {}): ReconciledTrustState {
     const timestamp = new Date().toISOString();
     const reconciledClaims: Claim[] = [];
     const findings: TechnicalFinding[] = [];
+    const declaredClaims = inputClaims.filter(claim => claim.source === 'DECLARATION');
+    const staticEvidences = inputEvidences.filter(evidence => evidence.sourceType === 'STATIC');
+    const assertions = options.subjectBindings || [];
 
-    // Separate declared vs observed claims
-    const declaredClaims = inputClaims.filter(c => c.source === 'DECLARATION');
-    const staticEvidences = inputEvidences.filter(e => e.sourceType === 'STATIC');
+    for (const declared of declaredClaims) {
+      const actionCandidates = declared.action
+        ? staticEvidences.filter(evidence => evidence.data?.capability === declared.action || evidence.data?.capabilities?.includes(declared.action))
+        : [];
 
-    // Track reconciled actions per agent subject
-    const processedKeys = new Set<string>();
+      const ranked = actionCandidates.map(evidence => {
+        const subject = assessSubject(declared.subject, evidence, assertions);
+        const resource = assessResource(declared, evidence);
+        const score = (subject.dimension === 'SATISFIED' ? 4 : subject.binding === 'OWNER_ASSERTED' ? 2 : 0) +
+          (resource.relation === 'EXACT' ? 2 : resource.relation === 'NARROWER_THAN' || resource.relation === 'BROADER_THAN' ? 1 : 0);
+        return { evidence, subject, resource, score };
+      }).sort((left, right) => right.score - left.score);
 
-    for (const dClaim of declaredClaims) {
-      const key = `${dClaim.subject}:${dClaim.action || 'ALL'}:${dClaim.resource || 'ALL'}`;
-      processedKeys.add(key);
+      const candidate = ranked[0];
+      const evidence = candidate?.evidence;
+      const subject = candidate?.subject || assessSubject(declared.subject, undefined, assertions);
+      const resource = candidate?.resource || assessResource(declared, undefined);
+      const rawConstraints = assessConstraints(declared, evidence);
+      const constraints = subject.dimension === 'SATISFIED' && resource.dimension === 'SATISFIED'
+        ? rawConstraints
+        : Object.fromEntries(Object.keys(rawConstraints).map(key => [key, 'UNVERIFIED' as DimensionAssessment]));
+      const predicate: DimensionAssessment = !declared.action
+        ? 'UNVERIFIED'
+        : declared.predicate === 'CAN'
+          ? 'SATISFIED'
+          : declared.predicate === 'CANNOT' && subject.dimension === 'SATISFIED' && resource.dimension === 'SATISFIED'
+            ? 'CONTRADICTED'
+            : 'UNVERIFIED';
+      const action: DimensionAssessment = evidence ? 'SATISFIED' : 'UNVERIFIED';
+      const strengthSatisfied = hasSufficientStrength(declared.action, evidence, this.CRITICAL_ACTIONS);
+      const anyConstraintContradicted = Object.values(constraints).includes('CONTRADICTED');
+      const allConstraintsSatisfied = Object.values(constraints).every(value => value === 'SATISFIED');
+      const dimensionsSatisfied = subject.dimension === 'SATISFIED' && predicate === 'SATISFIED' &&
+        action === 'SATISFIED' && resource.dimension === 'SATISFIED' && allConstraintsSatisfied && strengthSatisfied;
 
-      // Subject Isolation Guard: Ensure evidence subject matches claim subject
-      const matchingEvidences = staticEvidences.filter(e => e.subject === dClaim.subject);
+      let overall: EpistemicState = 'UNVERIFIED';
+      if (anyConstraintContradicted || predicate === 'CONTRADICTED') overall = 'CONFLICT';
+      else if (dimensionsSatisfied) overall = 'SUPPORTED';
 
-      // Find matching capability evidence
-      const capEvidence = matchingEvidences.find(e => {
-        if (!dClaim.action) return false;
-        const data = e.data || {};
-        return data.capability === dClaim.action || (data.capabilities && data.capabilities.includes(dClaim.action));
+      const diagnostics = [...subject.diagnostics, ...resource.diagnostics];
+      const assessment: ClaimMatchAssessment = {
+        overall,
+        subject: subject.dimension,
+        predicate,
+        action,
+        resource: resource.dimension,
+        resourceRelation: resource.relation,
+        constraints,
+        binding: subject.binding,
+        evidenceRefs: evidence ? [evidence.id] : [],
+        diagnostics: Array.from(new Set(diagnostics))
+      };
+
+      const provenance = [...declared.provenance];
+      if (evidence) provenance.push({
+        sourceType: 'STATIC', artifact: evidence.artifact, location: evidence.provenance?.file,
+        collectorId: evidence.collectorId, evidenceId: evidence.id
       });
-
-      let finalState: EpistemicState = 'UNVERIFIED';
-      let confidence = 0.4;
-      const combinedProvenance = [...dClaim.provenance];
-
-      if (capEvidence) {
-        combinedProvenance.push({
-          sourceType: 'STATIC',
-          artifact: capEvidence.artifact,
-          location: capEvidence.provenance?.file,
-          collectorId: capEvidence.collectorId,
-          evidenceId: capEvidence.id
-        });
-
-        // Check Evidence Strength against Critical Capability Policy
-        const isCritical = dClaim.action && this.CRITICAL_ACTIONS.includes(dClaim.action);
-        const strengthOrder: EvidenceStrength[] = [
-          'DEPENDENCY_ONLY', 'IMPORT_OBSERVED', 'FUNCTION_DEFINED',
-          'TOOL_REGISTERED', 'AGENT_BOUND', 'ENTRYPOINT_REACHABLE', 'RUNTIME_CONFIRMED'
-        ];
-
-        const strengthIndex = strengthOrder.indexOf(capEvidence.strength);
-        const agentBoundIndex = strengthOrder.indexOf('AGENT_BOUND');
-
-        if (isCritical && strengthIndex < agentBoundIndex) {
-          // Rule: Weak static evidence on critical capability CANNOT yield SUPPORTED
-          finalState = 'UNVERIFIED';
-          confidence = 0.3;
-          findings.push({
-            id: `finding-unverified-crit-${dClaim.id}`,
-            type: 'UNVERIFIED_CRITICAL_CLAIM',
-            severity: 'HIGH',
-            title: `Unverified Critical Claim: ${dClaim.action}`,
-            description: `Declared critical capability ${dClaim.action} on resource "${dClaim.resource}" lacks required AGENT_BOUND evidence (Observed strength: ${capEvidence.strength}).`,
-            declaredText: `Action ${dClaim.action} on ${dClaim.resource}`,
-            observedText: `Evidence strength: ${capEvidence.strength}`,
-            evidenceRefs: [capEvidence.id],
-            provenance: { file: capEvidence.provenance?.file || dClaim.provenance[0]?.artifact || 'taidyup.yaml' }
-          });
-        } else {
-          // Rule A: Compatible strong observation
-          finalState = 'SUPPORTED';
-          confidence = 0.85;
-        }
-
-        // Constraint Reconciliation: Check if declared constraint matches code observation
-        if (dClaim.constraints && dClaim.constraints.approval_required && !capEvidence.data?.hasOversight) {
-          findings.push({
-            id: `finding-oversight-unverified-${dClaim.id}`,
-            type: 'MISSING_OVERSIGHT_EVIDENCE',
-            severity: 'MEDIUM',
-            title: `Human Approval Unverified for ${dClaim.action}`,
-            description: `Manifest declared human approval required for ${dClaim.action}, but static analysis could not observe human oversight implementation in code.`,
-            declaredText: `approval_required: ${dClaim.constraints.approval_required}`,
-            observedText: `Human oversight NOT_OBSERVED`,
-            evidenceRefs: [capEvidence.id],
-            provenance: { file: dClaim.provenance[0]?.artifact || 'taidyup.yaml' }
-          });
-        }
-      } else {
-        // Rule B: Declared but unverified
-        finalState = 'UNVERIFIED';
-        confidence = 0.4;
-      }
 
       reconciledClaims.push({
-        ...dClaim,
-        status: finalState,
-        confidence,
-        provenance: combinedProvenance
+        ...declared,
+        status: overall,
+        confidence: overall === 'CONFLICT' ? 0.95 : overall === 'SUPPORTED' ? 0.85 : strengthSatisfied && evidence ? 0.4 : 0.3,
+        provenance,
+        assessment
       });
-    }
 
-    // Process Static Evidences for Undeclared Authority & Conflicts
-    for (const ev of staticEvidences) {
-      const data = ev.data || {};
-      const capAction: CapabilityAction | undefined = data.capability;
-      const resource: string = data.resource || ev.artifact;
+      if (declared.action && evidence && !strengthSatisfied && this.CRITICAL_ACTIONS.includes(declared.action)) {
+        findings.push({
+          id: `finding-unverified-crit-${declared.id}`,
+          type: 'UNVERIFIED_CRITICAL_CLAIM', severity: 'HIGH', title: `Unverified Critical Claim: ${declared.action}`,
+          description: `Declared critical capability ${declared.action} on resource "${declared.resource}" lacks required AGENT_BOUND evidence (Observed strength: ${evidence.strength}).`,
+          declaredText: `Action ${declared.action} on ${declared.resource}`, observedText: `Evidence strength: ${evidence.strength}`,
+          evidenceRefs: [evidence.id], provenance: { file: evidence.provenance?.file || declared.provenance[0]?.artifact || 'taidyup.json' }
+        });
+      }
 
-      if (capAction) {
-        const key = `${ev.subject}:${capAction}:${resource}`;
+      if (declared.constraints?.approval_required && constraints.approval_required === 'UNVERIFIED') {
+        findings.push({
+          id: `finding-oversight-unverified-${declared.id}`,
+          type: 'MISSING_OVERSIGHT_EVIDENCE', severity: 'MEDIUM', title: `Human Approval Unverified for ${declared.action}`,
+          description: `Manifest declared human approval required for ${declared.action}, but evidence tied to the same capability path does not verify that constraint.`,
+          declaredText: `approval_required: ${declared.constraints.approval_required}`, observedText: 'Approval policy UNVERIFIED',
+          evidenceRefs: evidence ? [evidence.id] : [], provenance: { file: declared.provenance[0]?.artifact || 'taidyup.json' }
+        });
+      }
 
-        // Check if declared in manifest
-        const declaredMatch = declaredClaims.find(d => d.subject === ev.subject && d.action === capAction);
-
-        if (!declaredMatch) {
-          const isCritical = this.CRITICAL_ACTIONS.includes(capAction);
-          const strengthOrder: EvidenceStrength[] = [
-            'DEPENDENCY_ONLY', 'IMPORT_OBSERVED', 'FUNCTION_DEFINED',
-            'TOOL_REGISTERED', 'AGENT_BOUND', 'ENTRYPOINT_REACHABLE', 'RUNTIME_CONFIRMED'
-          ];
-          const strengthIndex = strengthOrder.indexOf(ev.strength);
-          const agentBoundIndex = strengthOrder.indexOf('AGENT_BOUND');
-
-          if (strengthIndex >= agentBoundIndex) {
-            // Rule D: Strong agent-bound observation not declared -> UNDECLARED_OBSERVATION
-            reconciledClaims.push({
-              id: `claim-undeclared-${ev.id}`,
-              subject: ev.subject,
-              predicate: 'CAN',
-              action: capAction,
-              resource,
-              source: 'STATIC',
-              status: 'UNDECLARED_OBSERVATION',
-              confidence: 0.85,
-              provenance: [{
-                sourceType: 'STATIC',
-                artifact: ev.artifact,
-                location: ev.provenance?.file,
-                collectorId: ev.collectorId,
-                evidenceId: ev.id
-              }]
-            });
-
-            if (isCritical) {
-              findings.push({
-                id: `finding-undeclared-crit-${ev.id}`,
-                type: 'UNDECLARED_CRITICAL_CAPABILITY',
-                severity: 'CRITICAL',
-                title: `Undeclared Critical Capability: ${capAction}`,
-                description: `Static scanner observed agent-bound critical capability ${capAction} on resource "${resource}" that was NOT declared in taidyup.yaml.`,
-                declaredText: `No declaration for ${capAction}`,
-                observedText: `Observed bound capability ${capAction} in code`,
-                evidenceRefs: [ev.id],
-                provenance: { file: ev.provenance?.file || ev.artifact }
-              });
-            }
-          } else {
-            // Rule E: Weak functionality signal not declared -> POTENTIAL_ONLY / OBSERVED
-            reconciledClaims.push({
-              id: `claim-potential-${ev.id}`,
-              subject: ev.subject,
-              predicate: 'CAN',
-              action: capAction,
-              resource,
-              source: 'STATIC',
-              status: 'OBSERVED',
-              confidence: 0.3,
-              provenance: [{
-                sourceType: 'STATIC',
-                artifact: ev.artifact,
-                location: ev.provenance?.file,
-                collectorId: ev.collectorId,
-                evidenceId: ev.id
-              }]
-            });
-          }
-        }
+      if (overall === 'CONFLICT' && declared.action) {
+        findings.push({
+          id: `finding-conflict-${declared.id}`,
+          type: 'DECLARATION_CONFLICT', severity: 'CRITICAL', title: `Explicit Declaration Conflict: ${declared.action}`,
+          description: `Evidence bound to the same subject, capability and resource contradicts the declaration.`,
+          declaredText: `${declared.predicate} ${declared.action} ${declared.resource}`,
+          observedText: 'Bound contradictory evidence', evidenceRefs: evidence ? [evidence.id] : [],
+          provenance: { file: evidence?.provenance?.file || declared.provenance[0]?.artifact || 'taidyup.json' }
+        });
       }
     }
 
-    // Check for explicit CONFLICTS (e.g. Manifest says CANNOT or no capabilities, but code has AGENT_BOUND capability)
-    for (const dClaim of declaredClaims) {
-      if (dClaim.predicate === 'CANNOT' && dClaim.action) {
-        const contradictoryEv = staticEvidences.find(e => e.subject === dClaim.subject && e.data?.capability === dClaim.action && (e.strength === 'AGENT_BOUND' || e.strength === 'ENTRYPOINT_REACHABLE'));
-        if (contradictoryEv) {
-          const claimIdx = reconciledClaims.findIndex(c => c.id === dClaim.id);
-          if (claimIdx !== -1) {
-            reconciledClaims[claimIdx].status = 'CONFLICT';
-            reconciledClaims[claimIdx].confidence = 0.95;
-          }
+    for (const evidence of staticEvidences) {
+      const action: CapabilityAction | undefined = evidence.data?.capability;
+      if (!action) continue;
+      const resource = evidence.data?.resource || evidence.artifact;
+      const covered = declaredClaims.some(declared => {
+        if (declared.action !== action) return false;
+        const subject = assessSubject(declared.subject, evidence, assertions);
+        const resourceAssessment = assessResource(declared, evidence);
+        return subject.dimension === 'SATISFIED' && resourceAssessment.relation === 'EXACT';
+      });
+      if (covered) continue;
 
-          findings.push({
-            id: `finding-conflict-${dClaim.id}`,
-            type: 'DECLARATION_CONFLICT',
-            severity: 'CRITICAL',
-            title: `Explicit Declaration Conflict: ${dClaim.action}`,
-            description: `Manifest declared prohibition (CANNOT) for ${dClaim.action}, but static analysis observed active agent binding in code.`,
-            declaredText: `CANNOT ${dClaim.action}`,
-            observedText: `Bound ${dClaim.action} in ${contradictoryEv.provenance?.file}`,
-            evidenceRefs: [contradictoryEv.id],
-            provenance: { file: contradictoryEv.provenance?.file || 'taidyup.yaml' }
-          });
-        }
+      const strong = STRENGTH_ORDER.indexOf(evidence.strength) >= STRENGTH_ORDER.indexOf('AGENT_BOUND');
+      reconciledClaims.push({
+        id: `${strong ? 'claim-undeclared' : 'claim-potential'}-${evidence.id}`,
+        subject: evidence.subject, predicate: 'CAN', action, resource, source: 'STATIC',
+        status: strong ? 'UNDECLARED_OBSERVATION' : 'OBSERVED', confidence: strong ? 0.85 : 0.3,
+        provenance: [{ sourceType: 'STATIC', artifact: evidence.artifact, location: evidence.provenance?.file, collectorId: evidence.collectorId, evidenceId: evidence.id }]
+      });
+
+      if (strong && this.CRITICAL_ACTIONS.includes(action)) {
+        findings.push({
+          id: `finding-undeclared-crit-${evidence.id}`,
+          type: 'UNDECLARED_CRITICAL_CAPABILITY', severity: 'CRITICAL', title: `Undeclared Critical Capability: ${action}`,
+          description: `Static scanner observed agent-bound critical capability ${action} on resource "${resource}" without a fully bound declaration.`,
+          declaredText: `No bound declaration for ${action}`, observedText: `Observed bound capability ${action} in code`,
+          evidenceRefs: [evidence.id], provenance: { file: evidence.provenance?.file || evidence.artifact }
+        });
       }
     }
 
-    // Summarize Results
     const summary = {
       totalClaims: reconciledClaims.length,
-      supportedCount: reconciledClaims.filter(c => c.status === 'SUPPORTED').length,
-      unverifiedCount: reconciledClaims.filter(c => c.status === 'UNVERIFIED').length,
-      conflictCount: reconciledClaims.filter(c => c.status === 'CONFLICT').length,
-      undeclaredCount: reconciledClaims.filter(c => c.status === 'UNDECLARED_OBSERVATION').length,
-      unknownCount: reconciledClaims.filter(c => c.status === 'UNKNOWN').length,
-      criticalFindingsCount: findings.filter(f => f.severity === 'CRITICAL' || f.severity === 'HIGH').length
+      supportedCount: reconciledClaims.filter(claim => claim.status === 'SUPPORTED').length,
+      unverifiedCount: reconciledClaims.filter(claim => claim.status === 'UNVERIFIED').length,
+      conflictCount: reconciledClaims.filter(claim => claim.status === 'CONFLICT').length,
+      undeclaredCount: reconciledClaims.filter(claim => claim.status === 'UNDECLARED_OBSERVATION').length,
+      unknownCount: reconciledClaims.filter(claim => claim.status === 'UNKNOWN').length,
+      criticalFindingsCount: findings.filter(finding => finding.severity === 'CRITICAL' || finding.severity === 'HIGH').length
     };
 
-    return {
-      schemaVersion: '1.0.0',
-      timestamp,
-      summary,
-      reconciledClaims,
-      findings
-    };
+    return { schemaVersion: '1.1.0', timestamp, summary, reconciledClaims, findings };
   }
 }

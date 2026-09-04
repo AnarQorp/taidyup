@@ -37,6 +37,52 @@ export type EvidenceStrength =
   | 'ENTRYPOINT_REACHABLE'
   | 'RUNTIME_CONFIRMED';
 
+export type DimensionAssessment = 'SATISFIED' | 'UNVERIFIED' | 'CONTRADICTED' | 'NOT_APPLICABLE';
+export type ResourceRelation = 'EXACT' | 'NARROWER_THAN' | 'BROADER_THAN' | 'DISJOINT' | 'UNRESOLVED';
+export type BindingAssessment = 'UNBOUND' | 'OWNER_ASSERTED' | 'EVIDENCE_BOUND' | 'STALE' | 'AMBIGUOUS';
+
+export interface ResourceDescriptor {
+  namespace: string;
+  version: string;
+  type: string;
+  scope: string;
+  artifact: string;
+}
+
+export interface ComponentLocator {
+  scheme: string;
+  version: string;
+  revision: string;
+  language: string;
+  module: string;
+  qualifiedSymbol: string;
+  structuralFingerprint: string;
+}
+
+export interface SubjectBindingAssertion {
+  declaredSubject: string;
+  observedComponent: ComponentLocator;
+  relation: 'REPRESENTED_BY' | 'IMPLEMENTS' | 'PART_OF';
+  assertedBy: string;
+}
+
+export interface ClaimMatchAssessment {
+  overall: EpistemicState;
+  subject: DimensionAssessment;
+  predicate: DimensionAssessment;
+  action: DimensionAssessment;
+  resource: DimensionAssessment;
+  resourceRelation: ResourceRelation;
+  constraints: Record<string, DimensionAssessment>;
+  binding: BindingAssessment;
+  evidenceRefs: string[];
+  diagnostics: string[];
+}
+
+export interface ReconciliationOptions {
+  subjectBindings?: SubjectBindingAssertion[];
+}
+
 export interface ProvenanceRecord {
   sourceType: SourceType;
   artifact: string;
@@ -57,6 +103,8 @@ export interface Claim {
   status: EpistemicState;
   confidence?: number;
   provenance: ProvenanceRecord[];
+  resourceDescriptor?: ResourceDescriptor;
+  assessment?: ClaimMatchAssessment;
 }
 
 export interface Evidence {

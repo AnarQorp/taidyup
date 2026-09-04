@@ -68,6 +68,17 @@ export interface CapabilityBindingEdge {
   provenanceFile: string;
 }
 
+export interface ComponentLocator {
+  id: string;
+  scheme: 'taidyup-component';
+  version: '1';
+  revision: string;
+  language: string;
+  module: string;
+  qualifiedSymbol: string;
+  structuralFingerprint: string;
+}
+
 export interface DiscoveredAssetSignal {
   id: string;
   primaryAssetType: AssetType;
@@ -86,6 +97,7 @@ export interface DiscoveredAssetSignal {
   credentialDependencies: Array<{ name: string; type: string; provenanceFile: string }>;
   capabilities: CapabilityClaim[];
   bindingGraph: CapabilityBindingEdge[];
+  componentLocator?: ComponentLocator;
   humanOversight: 'OBSERVED_PRESENT' | 'OBSERVED_ABSENT' | 'NOT_OBSERVED' | 'UNKNOWN';
   revocation: 'OBSERVED_PRESENT' | 'OBSERVED_ABSENT' | 'NOT_OBSERVED' | 'UNKNOWN';
   provenance: {

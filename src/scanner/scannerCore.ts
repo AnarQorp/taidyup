@@ -8,7 +8,8 @@ import {
   CapabilityBindingEdge,
   CapabilityClaim,
   DiscoveredAssetSignal,
-  EvidenceStrength
+  EvidenceStrength,
+  ComponentLocator
 } from './types.js';
 
 function executableCode(content: string): string {
@@ -64,7 +65,7 @@ function pythonClassBodies(code: string): Array<{ name: string; body: string }> 
   const lines = code.split(/\r?\n/);
   const classes: Array<{ name: string; body: string }> = [];
   for (let index = 0; index < lines.length; index++) {
-    const match = lines[index].match(/^(\s*)class\s+(\w+)\s*\([^)]*\)\s*:/);
+    const match = lines[index].match(/^(\s*)class\s+(\w+)\s*(?:\([^)]*\))?\s*:/);
     if (!match) continue;
     const indentation = match[1].length;
     const body: string[] = [];
@@ -80,6 +81,7 @@ function pythonClassBodies(code: string): Array<{ name: string; body: string }> 
 
 function structuralAnalysis(units: SourceUnit[]): {
   hasAgent: boolean;
+  agentSymbols: Set<string>;
   agentFiles: Set<string>;
   capabilities: StructuralCapability[];
   gateFiles: Set<string>;
@@ -135,7 +137,7 @@ function structuralAnalysis(units: SourceUnit[]): {
   const hasAgent = agentSymbols.size > 0 && receiverNames.size > 0;
   const capabilities: StructuralCapability[] = [];
   const gateFiles = new Set<string>();
-  if (!hasAgent) return { hasAgent, agentFiles, capabilities, gateFiles };
+  if (!hasAgent) return { hasAgent, agentSymbols, agentFiles, capabilities, gateFiles };
 
   for (const unit of units) {
     const scopes = pythonFunctionBodies(unit.code).map(fn => fn.body);
@@ -195,7 +197,7 @@ function structuralAnalysis(units: SourceUnit[]): {
     }
   }
 
-  return { hasAgent, agentFiles: new Set([...agentFiles, ...reachableAgentFiles]), capabilities, gateFiles };
+  return { hasAgent, agentSymbols, agentFiles: new Set([...agentFiles, ...reachableAgentFiles]), capabilities, gateFiles };
 }
 
 export class ScannerCore {
@@ -555,6 +557,34 @@ export class ScannerCore {
     }
 
     const confidenceScore = primaryAssetType === 'UNKNOWN' ? 0 : primaryAssetType === 'AGENT' ? 0.95 : 0.90;
+    const structuralComponentCandidates = sourceUnits.flatMap(unit =>
+      pythonClassBodies(unit.code).map(component => ({ file: unit.relativePath, symbol: component.name }))
+    ).sort((left, right) => `${left.file}:${left.symbol}`.localeCompare(`${right.file}:${right.symbol}`));
+    const primaryAgentFile = Array.from(structural.agentFiles).sort()[0] || structuralComponentCandidates[0]?.file;
+    const primaryAgentSymbol = Array.from(structural.agentSymbols).sort()[0] || structuralComponentCandidates[0]?.symbol;
+    let componentLocator: ComponentLocator | undefined;
+    if (primaryAgentFile && primaryAgentSymbol) {
+      const componentCode = sourceUnits.find(unit => unit.relativePath === primaryAgentFile)?.code || '';
+      const structuralFingerprint = `sha256:${crypto.createHash('sha256').update(`${primaryAgentSymbol}\n${componentCode}`).digest('hex')}`;
+      const revision = `sha256:${crypto.createHash('sha256').update(sourceUnits
+        .slice()
+        .sort((left, right) => left.relativePath.localeCompare(right.relativePath))
+        .map(unit => `${unit.relativePath}\n${unit.code}`)
+        .join('\n')).digest('hex')}`;
+      const locatorPayload = {
+        scheme: 'taidyup-component' as const,
+        version: '1' as const,
+        revision,
+        language: primaryAgentFile.endsWith('.py') ? 'python' : primaryAgentFile.endsWith('.ts') ? 'typescript' : 'javascript',
+        module: primaryAgentFile,
+        qualifiedSymbol: primaryAgentSymbol,
+        structuralFingerprint
+      };
+      componentLocator = {
+        id: `component-${crypto.createHash('sha256').update(JSON.stringify(locatorPayload)).digest('hex').substring(0, 16)}`,
+        ...locatorPayload
+      };
+    }
 
     const assetSignal: DiscoveredAssetSignal = {
       id: `asset-${crypto.createHash('md5').update(repoPath).digest('hex').substring(0, 8)}`,
@@ -574,6 +604,7 @@ export class ScannerCore {
       credentialDependencies: detectedProvider !== 'UNKNOWN' ? [{ name: `${detectedProvider.toUpperCase()}_API_KEY`, type: 'API_KEY', provenanceFile: providerEvidence?.file || 'UNKNOWN' }] : [],
       capabilities: claims,
       bindingGraph,
+      componentLocator,
       humanOversight: 'UNKNOWN',
       revocation: 'NOT_OBSERVED',
       provenance: {
