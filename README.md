@@ -62,13 +62,15 @@ Requires Node.js 18+.
 ```bash
 npm install -g taidyup@alpha
 cd your-ai-project
+taidyup init
+# Review taidyup.json.draft and explicitly complete agents[] first.
 taidyup init --accept
 taidyup validate .
 ```
 
-This runs locally, creates `taidyup.json`, scans the project, and prints the first reconciliation summary: supported, unverified, conflicting, undeclared, and unknown capabilities.
+This runs locally, proposes non-declarative candidate suggestions, accepts only the owner-reviewed declaration in `agents[]`, then prints the first reconciliation summary: supported, unverified, conflicting, undeclared, and unknown capabilities.
 
-`--accept` turns the generated draft into a declaration for this first trial. Review `taidyup.json` before relying on the validation or generated evidence. tAIdyup is an Early Alpha; its static analysis can miss capabilities or report false positives, and its output is not a certification or legal compliance assessment.
+`--accept` does not promote scanner suggestions. It validates an existing `taidyup.json.draft` whose `agents[]` the owner has explicitly reviewed and completed, then writes only that canonical declaration. tAIdyup is an Early Alpha; its static analysis can miss capabilities or report false positives, and its output is not a certification or legal compliance assessment.
 
 ```text
         BUILD
@@ -375,10 +377,12 @@ npm install -g taidyup
 ```bash
 cd your-ai-project
 
+taidyup init
+# Review taidyup.json.draft and explicitly complete agents[] first.
 taidyup init --accept
 ```
 
-This creates `taidyup.json` as a declaration. Review it before relying on validation or generated evidence. Run `taidyup init` without `--accept` if you prefer to generate a non-canonical `taidyup.json.draft` first.
+The first command creates a non-declarative review draft. After the owner explicitly completes a valid declaration in `agents[]`, `--accept` validates it and creates `taidyup.json`. Candidate suggestions are never copied into the declaration.
 
 ### Inspect it
 

@@ -34,4 +34,4 @@ agents:
 
 ## Transition Rules: DRAFT vs DECLARED
 1. **`GENERATED_DRAFT` (`taidyup.json.draft`):** Created automatically by `taidyup init`. Contains candidate suggestions inferred from code. **NOT** a developer declaration.
-2. **`DECLARED` (`taidyup.json`):** Created when the developer explicitly reviews, confirms, or accepts the draft. The Reconciliation Engine treats this file as developer intent.
+2. **`DECLARED` (`taidyup.json`):** Created only after the owner explicitly completes a valid declaration in the draft's `agents[]` and runs `taidyup init --accept`. Candidate suggestions are not copied into this file. The Reconciliation Engine treats only this accepted manifest as developer intent.

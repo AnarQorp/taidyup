@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { ScannerCore } from '../scanner/scannerCore.js';
+import { ManifestParser } from '../trust-kernel/manifestParser.js';
 import { ReportGenerator } from '../trust-kernel/reportGenerator.js';
 import { SarifExporter } from './sarifExporter.js';
 import { DiffEngine } from './diffEngine.js';
@@ -73,38 +74,50 @@ export class CliCore {
     const targetDir = path.resolve(options.targetPath);
     console.log(`🚀 Initializing tAIdyup in \`${targetDir}\`...`);
 
-    const scanRes = await ScannerCore.scanRepository(targetDir);
-
-    const proposedAgents = scanRes.assets.map(asset => ({
-      id: asset.id,
-      name: asset.name,
-      purpose: `Candidate asset detected as ${asset.primaryAssetType} using ${asset.framework || 'unknown framework'}`,
-      owner: { name: 'Developer Name', email: 'dev@company.com' },
-      provider: asset.provider,
-      framework: asset.framework,
-      capabilities: asset.capabilities.map(c => ({
-        action: c.action,
-        resource: c.resource
-      }))
-    }));
-
     if (options.accept) {
-      // Legacy bulk-accept behavior retained pending an explicit product decision.
-      const draftManifest = {
-        version: '1.0',
-        project: path.basename(targetDir),
-        agents: proposedAgents.length > 0 ? proposedAgents : [{
-          id: 'main-agent',
-          name: 'Main AI Agent',
-          purpose: 'Primary application AI agent',
-          owner: { name: 'Developer', email: 'dev@company.com' },
-          capabilities: [{ action: 'READ', resource: 'database:main' }]
-        }]
-      };
+      const draftPath = path.join(targetDir, 'taidyup.json.draft');
       const manifestPath = path.join(targetDir, 'taidyup.json');
-      fs.writeFileSync(manifestPath, JSON.stringify(draftManifest, null, 2), 'utf-8');
+      if (!fs.existsSync(draftPath)) {
+        console.error('❌ No owner-reviewed declaration draft found. Run `taidyup init` and review it first.');
+        return 2;
+      }
+      if (fs.existsSync(manifestPath)) {
+        console.error(`❌ Refusing to overwrite existing declaration manifest at \`${manifestPath}\`.`);
+        return 2;
+      }
+
+      let reviewDraft: any;
+      try {
+        reviewDraft = JSON.parse(fs.readFileSync(draftPath, 'utf-8'));
+      } catch (error: any) {
+        console.error(`❌ Invalid declaration draft JSON: ${error?.message || error}`);
+        return 2;
+      }
+
+      const declarationManifest = {
+        version: reviewDraft.version,
+        project: reviewDraft.project,
+        agents: reviewDraft.agents
+      };
+      const parsed = ManifestParser.parseManifest(declarationManifest, 'taidyup.json.draft');
+      if (!parsed.isValid) {
+        console.error('❌ No valid owner-reviewed declaration found. Candidate suggestions are observations, not declarations.');
+        for (const error of parsed.errors) console.error(`   • ${error}`);
+        return 2;
+      }
+
+      try {
+        fs.writeFileSync(manifestPath, JSON.stringify(declarationManifest, null, 2), { encoding: 'utf-8', flag: 'wx' });
+      } catch (error: any) {
+        if (error?.code === 'EEXIST') {
+          console.error(`❌ Refusing to overwrite existing declaration manifest at \`${manifestPath}\`.`);
+          return 2;
+        }
+        throw error;
+      }
       console.log(`✅ tAIdyup Declaration Manifest created at \`${manifestPath}\` (Status: DECLARED).`);
     } else {
+      const scanRes = await ScannerCore.scanRepository(targetDir);
       const reviewDraft = {
         draftMetadata: {
           status: 'GENERATED_DRAFT',
@@ -298,7 +311,7 @@ COMMANDS:
   diff      <base> <target>    Compute semantic authority diff between two reports
 
 OPTIONS:
-  --accept, -y                 Accept draft manifest during init (GENERATED_DRAFT -> DECLARED)
+  --accept, -y                 Validate and accept owner-reviewed agents[] from the existing draft
   --strict                     Fail validate with exit code 1 if critical findings exist
   --json                       Output raw JSON for scan
   --output, -o <file>          Save scan output to file
