@@ -18,6 +18,186 @@ function executableCode(content: string): string {
     .replace(/(['"`])(?:\\.|(?!\1)[\s\S])*?\1/g, ' ');
 }
 
+interface SourceUnit {
+  relativePath: string;
+  code: string;
+}
+
+interface StructuralCapability {
+  action: CapabilityAction;
+  resource: string;
+  file: string;
+  relationship: string;
+  functionName: string;
+}
+
+function pythonFunctionBodies(code: string): Array<{ name: string; parameters: string[]; body: string }> {
+  const lines = code.split(/\r?\n/);
+  const functions: Array<{ name: string; parameters: string[]; body: string }> = [];
+  for (let index = 0; index < lines.length; index++) {
+    const start = lines[index].match(/^(\s*)def\s+(\w+)\s*\(/);
+    if (!start) continue;
+    let signature = lines[index];
+    let signatureEnd = index;
+    while (!/\)\s*(?:->[^:]*)?:\s*$/.test(signature) && signatureEnd + 1 < lines.length) {
+      signature += `\n${lines[++signatureEnd]}`;
+    }
+    const parametersMatch = signature.match(/\(([\s\S]*?)\)\s*(?:->[^:]*)?:\s*$/);
+    if (!parametersMatch) continue;
+    const indentation = start[1].length;
+    const body: string[] = [];
+    for (let cursor = signatureEnd + 1; cursor < lines.length; cursor++) {
+      const line = lines[cursor];
+      if (line.trim() && line.match(/^\s*/)?.[0].length! <= indentation) break;
+      body.push(line);
+    }
+    functions.push({
+      name: start[2],
+      parameters: parametersMatch[1].split(',').map(value => value.trim().split(/[:=]/)[0].trim()).filter(Boolean),
+      body: body.join('\n')
+    });
+  }
+  return functions;
+}
+
+function pythonClassBodies(code: string): Array<{ name: string; body: string }> {
+  const lines = code.split(/\r?\n/);
+  const classes: Array<{ name: string; body: string }> = [];
+  for (let index = 0; index < lines.length; index++) {
+    const match = lines[index].match(/^(\s*)class\s+(\w+)\s*\([^)]*\)\s*:/);
+    if (!match) continue;
+    const indentation = match[1].length;
+    const body: string[] = [];
+    for (let cursor = index + 1; cursor < lines.length; cursor++) {
+      const line = lines[cursor];
+      if (line.trim() && line.match(/^\s*/)?.[0].length! <= indentation) break;
+      body.push(line);
+    }
+    classes.push({ name: match[2], body: body.join('\n') });
+  }
+  return classes;
+}
+
+function structuralAnalysis(units: SourceUnit[]): {
+  hasAgent: boolean;
+  agentFiles: Set<string>;
+  capabilities: StructuralCapability[];
+  gateFiles: Set<string>;
+} {
+  const agentSymbols = new Set<string>();
+  const agentFiles = new Set<string>();
+  const executionFunctions = new Set<string>();
+  const wrapperFunctions = new Map<string, { agentParameter: number; dataParameters: number[] }>();
+
+  for (const unit of units) {
+    for (const fn of pythonFunctionBodies(unit.code)) {
+      if (/\.upload\s*\([^)]*\)\.run\s*\(/s.test(fn.body) || /\bexecution\w*\.run\s*\(/.test(fn.body)) {
+        executionFunctions.add(fn.name);
+      }
+      const delegated = fn.body.match(/\b(\w+)\.(?:init|initialize|improve)\s*\(([^)]*)\)/s);
+      if (delegated) {
+        const agentParameter = fn.parameters.indexOf(delegated[1]);
+        const delegatedArguments = delegated[2].split(',').map(value => value.trim());
+        const dataParameters = fn.parameters
+          .map((parameter, index) => delegatedArguments.includes(parameter) && index !== agentParameter ? index : -1)
+          .filter(index => index >= 0);
+        if (agentParameter >= 0 && dataParameters.length > 0) wrapperFunctions.set(fn.name, { agentParameter, dataParameters });
+      }
+    }
+
+    for (const pythonClass of pythonClassBodies(unit.code)) {
+      const exposesTaskMethod = /def\s+(?:init|initialize|improve)\s*\([^)]*(?:prompt|task)[^)]*\)/.test(pythonClass.body);
+      const composesModel = /self\.(?:ai|model|llm)\b|self\.\w*(?:gen|model|completion)\w*_fn\b/.test(pythonClass.body);
+      const invokesModelOrGenerator = /self\.(?:ai|model|llm)\.\w+\s*\(|self\.\w*(?:gen|model|completion)\w*_fn\s*\(/.test(pythonClass.body);
+      if (exposesTaskMethod && composesModel && invokesModelOrGenerator) {
+        agentSymbols.add(pythonClass.name);
+        agentFiles.add(unit.relativePath);
+      }
+    }
+  }
+
+  const receiverNames = new Set<string>();
+  const reachableAgentFiles = new Set<string>();
+  for (const unit of units) {
+    for (const symbol of agentSymbols) {
+      const construction = new RegExp(`\\b(\\w+)\\s*=\\s*${symbol}(?:\\.\\w+)?\\s*\\(`, 'g');
+      for (const match of unit.code.matchAll(construction)) {
+        const receiver = match[1];
+        if (new RegExp(`\\b${receiver}\\.(?:init|initialize|improve)\\s*\\(`).test(unit.code) ||
+            Array.from(wrapperFunctions.keys()).some(wrapper => new RegExp(`\\b${wrapper}\\s*\\([^)]*\\b${receiver}\\b`, 's').test(unit.code))) {
+          receiverNames.add(receiver);
+          reachableAgentFiles.add(unit.relativePath);
+        }
+      }
+    }
+  }
+
+  const hasAgent = agentSymbols.size > 0 && receiverNames.size > 0;
+  const capabilities: StructuralCapability[] = [];
+  const gateFiles = new Set<string>();
+  if (!hasAgent) return { hasAgent, agentFiles, capabilities, gateFiles };
+
+  for (const unit of units) {
+    const scopes = pythonFunctionBodies(unit.code).map(fn => fn.body);
+    if (scopes.length === 0) scopes.push(unit.code);
+    for (const scope of scopes) {
+      const derived = new Set<string>();
+      const readVariables = new Set<string>();
+      for (const match of scope.matchAll(/^\s*(?:\(\s*)?(\w+)(?:\s*,[^=]*)?\)?\s*=\s*[^\n]*\.(?:read\w*|ask_for_files)\s*\(/gm)) readVariables.add(match[1]);
+      for (const receiver of receiverNames) {
+        const output = new RegExp(`\\b(\\w+)\\s*=\\s*${receiver}\\.(?:init|initialize|improve)\\s*\\(([^)]*)\\)`, 'g');
+        for (const match of scope.matchAll(output)) {
+          derived.add(match[1]);
+          for (const readVariable of readVariables) {
+            if (new RegExp(`\\b${readVariable}\\b`).test(match[2])) {
+              capabilities.push({ action: 'READ', resource: 'Selected Project Files', file: unit.relativePath, relationship: `${readVariable} -> ${receiver} input`, functionName: 'read-to-agent' });
+            }
+          }
+        }
+      }
+      for (const [wrapper, summary] of wrapperFunctions) {
+        const call = new RegExp(`\\b(\\w+)\\s*=\\s*${wrapper}\\s*\\(([^)]*)\\)`, 'g');
+        for (const match of scope.matchAll(call)) {
+          const args = match[2].split(',').map(value => value.trim());
+          if (receiverNames.has(args[summary.agentParameter])) {
+            derived.add(match[1]);
+            const readArgument = summary.dataParameters.map(index => args[index]).find(argument => readVariables.has(argument));
+            if (readArgument) capabilities.push({ action: 'READ', resource: 'Selected Project Files', file: unit.relativePath, relationship: `${readArgument} -> ${wrapper} -> agent input`, functionName: wrapper });
+          }
+        }
+      }
+
+      for (const variable of derived) {
+        const writeSink = new RegExp(`\\.\\w*(?:push|write_files|save_files|persist)\\w*\\s*\\(\\s*${variable}\\b`);
+        if (writeSink.test(scope)) capabilities.push({ action: 'WRITE', resource: 'Generated / Selected Project Files', file: unit.relativePath, relationship: `agent output ${variable} -> persistence sink`, functionName: 'agent-output-write' });
+        const executeSink = new RegExp(`\\.upload\\s*\\(\\s*${variable}\\s*\\)\\.run\\s*\\(`);
+        if (executeSink.test(scope)) {
+          capabilities.push({ action: 'EXECUTE', resource: 'Generated Entrypoint', file: unit.relativePath, relationship: `agent output ${variable} -> execution sink`, functionName: 'agent-output-execute' });
+          if (/\b(?:confirm|input)\s*\(/.test(scope)) gateFiles.add(unit.relativePath);
+        }
+      }
+    }
+  }
+
+  // Resolve an injected processor only when its default names a function whose body is an execution sink,
+  // and the processor consumes a value produced by the component's generator.
+  for (const unit of units) {
+    for (const executionFunction of executionFunctions) {
+      const defaultBinding = new RegExp(`\\b(\\w+_fn)\\s*(?::[^=,)]*)?=\\s*${executionFunction}\\b`).exec(unit.code);
+      if (!defaultBinding) continue;
+      const property = defaultBinding[1];
+      const produced = /\b(\w+)\s*=\s*self\.\w*(?:gen|model|completion)\w*_fn\s*\(/.exec(unit.code)?.[1];
+      if (produced && new RegExp(`self\\.${property}\\s*\\([^)]*\\b${produced}\\b`, 's').test(unit.code)) {
+        capabilities.push({ action: 'EXECUTE', resource: 'Generated Entrypoint', file: unit.relativePath, relationship: `agent output ${produced} -> injected ${executionFunction} sink`, functionName: executionFunction });
+        const sinkUnit = units.find(candidate => new RegExp(`def\\s+${executionFunction}\\s*\\(`).test(candidate.code));
+        if (sinkUnit && /\b(?:confirm|input)\s*\(/.test(sinkUnit.code)) gateFiles.add(sinkUnit.relativePath);
+      }
+    }
+  }
+
+  return { hasAgent, agentFiles: new Set([...agentFiles, ...reachableAgentFiles]), capabilities, gateFiles };
+}
+
 export class ScannerCore {
   public static SCANNER_VERSION = '4.0.0-open-core';
 
@@ -220,6 +400,17 @@ export class ScannerCore {
       } catch (e) {}
     }
 
+    const sourceUnits: SourceUnit[] = [];
+    for (const prFile of files.prod) {
+      if (!prFile.endsWith('.py') && !prFile.endsWith('.ts') && !prFile.endsWith('.js')) continue;
+      try {
+        sourceUnits.push({
+          relativePath: path.relative(repoPath, prFile),
+          code: executableCode(fs.readFileSync(prFile, 'utf-8'))
+        });
+      } catch (e) {}
+    }
+
     // Inspect Production Source Code for Agent Construction & Binding
     for (const prFile of files.prod) {
       if (prFile.endsWith('.py') || prFile.endsWith('.ts') || prFile.endsWith('.js')) {
@@ -249,6 +440,16 @@ export class ScannerCore {
       }
     }
 
+    const structural = structuralAnalysis(sourceUnits);
+    if (structural.hasAgent) {
+      hasAgentConstruction = true;
+      for (const file of structural.agentFiles) {
+        positiveSignals.push(`STRUCTURAL_AGENT_COMPONENT: ${file}`);
+        sources.push(file);
+      }
+      for (const file of structural.gateFiles) positiveSignals.push(`HUMAN_GATE_OBSERVED: ${file}`);
+    }
+
     // SEMANTIC ASSET CLASSIFICATION
     if (isPureUiOrNonAi && !hasAiDependency && !hasAgentConstruction) {
       primaryAssetType = 'NON_AI';
@@ -271,6 +472,36 @@ export class ScannerCore {
     const claims: CapabilityClaim[] = [];
     const bindingGraph: CapabilityBindingEdge[] = [];
     const unboundPotentialFunctionalities: Array<{ capability: CapabilityAction; resource: string; reason: string; file: string }> = [];
+
+    for (const capability of structural.capabilities) {
+      if (claims.some(claim => claim.action === capability.action && claim.provenance.file === capability.file)) continue;
+      claims.push({
+        subject: 'agent-primary',
+        action: capability.action,
+        resource: capability.resource,
+        constraint: 'UNKNOWN',
+        status: 'INFERRED',
+        evidenceStrength: 'AGENT_BOUND',
+        confidence: 0.85,
+        provenance: {
+          file: capability.file,
+          snippet: capability.relationship
+        }
+      });
+      bindingGraph.push({
+        assetId: 'agent-primary',
+        toolId: `structural-${capability.action.toLowerCase()}`,
+        toolName: capability.relationship,
+        functionName: capability.functionName,
+        targetResource: capability.resource,
+        capability: capability.action,
+        evidenceStrength: 'AGENT_BOUND',
+        confidence: 0.85,
+        provenanceFile: capability.file
+      });
+      positiveSignals.push(`STRUCTURAL_${capability.action}_BINDING: ${capability.file} (${capability.relationship})`);
+      sources.push(capability.file);
+    }
 
     // Shell Check
     const shellFiles: string[] = [];
