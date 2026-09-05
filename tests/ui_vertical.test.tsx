@@ -27,7 +27,10 @@ function run() {
     assert.match(success, new RegExp(`>${state}<`), `${state} result must render`);
   }
   assert.strictEqual((success.match(/>1<\/p>/g) || []).length >= 5, true, 'summary counts must come from the fixture reconciliation summary');
-  assert.match(success, /Declared and observed material remain separate/);
+  assert.match(success, /Authority explorer/);
+  assert.match(success, /Capabilities/);
+  assert.match(success, /Conclusion first/);
+  assert.match(success, /Capability evidence layers/);
   assert.match(success, /data-source-type="DECLARATION"/);
   assert.match(success, /data-source-type="STATIC"/);
   assert.match(success, />Connected</);
@@ -41,6 +44,10 @@ function run() {
   const detail = renderToStaticMarkup(<ClaimDetail claim={detailClaim} result={uiTrustStatesFixture} onClose={() => {}} />);
   assert.match(detail, />Declared</);
   assert.match(detail, />Observed</);
+  assert.match(detail, /Why this result/);
+  assert.match(detail, /What tAIdyup doesn&#x27;t know/);
+  assert.match(detail, /Technical evidence/);
+  assert.match(detail, /Full provenance/);
   assert.match(detail, /test-manifest-parser/);
   assert.match(detail, /test-only-collector/);
   assert.match(detail, /AGENT_BOUND/);

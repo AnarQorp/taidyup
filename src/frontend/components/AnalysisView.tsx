@@ -14,14 +14,56 @@ const summaryStates: Array<{ state: EpistemicState; key: keyof LocalProjectAnaly
   { state: 'UNKNOWN', key: 'unknownCount', label: 'Unknown' }
 ];
 
-function ClaimFields({ claim }: { claim: Claim }) {
-  return <dl className="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-2 text-xs">
-    <dt className="text-[#8d90a0]">Subject</dt><dd className="font-mono text-white">{claim.subject}</dd>
-    <dt className="text-[#8d90a0]">Predicate</dt><dd className="font-mono text-white">{claim.predicate}</dd>
-    {claim.action && <><dt className="text-[#8d90a0]">Action</dt><dd className="font-mono text-white">{claim.action}</dd></>}
-    {claim.resource && <><dt className="text-[#8d90a0]">Resource</dt><dd className="font-mono text-white break-all">{claim.resource}</dd></>}
-    {claim.constraints && Object.keys(claim.constraints).length > 0 && <><dt className="text-[#8d90a0]">Constraints</dt><dd className="font-mono text-white break-all">{JSON.stringify(claim.constraints)}</dd></>}
-  </dl>;
+function compactPath(value?: string): string {
+  if (!value) return 'Unknown source';
+  const normalized = value.replaceAll('\\', '/');
+  const demoAt = normalized.indexOf('/demo/');
+  if (demoAt >= 0) return normalized.slice(demoAt + 1);
+  const parts = normalized.split('/').filter(Boolean);
+  return parts.slice(-2).join('/') || value;
+}
+
+function resourcePresentation(claim: Claim): { label: string; detail?: string; raw?: string } {
+  if (!claim.resource) return { label: 'Resource unresolved' };
+  try {
+    const parsed = JSON.parse(claim.resource) as Record<string, unknown>;
+    const artifact = typeof parsed.artifact === 'string' ? parsed.artifact : '';
+    const type = typeof parsed.type === 'string' ? parsed.type : '';
+    const scope = typeof parsed.scope === 'string' ? parsed.scope : '';
+    const artifactName = artifact.split('.').pop()?.replace(/tool$/i, '') || '';
+    const label = artifactName
+      ? artifactName.charAt(0).toUpperCase() + artifactName.slice(1)
+      : type
+        ? type.charAt(0).toUpperCase() + type.slice(1)
+        : 'Structured resource';
+    return { label, detail: scope && scope !== 'unknown' ? scope : 'resource details unresolved', raw: claim.resource };
+  } catch {
+    return { label: claim.resource, raw: claim.resource };
+  }
+}
+
+function evidenceForClaim(claim: Claim, result: LocalProjectAnalysis | ConnectedLocalProjectAnalysis): Evidence[] {
+  const ids = new Set([...claim.provenance.map(item => item.evidenceId), ...(claim.assessment?.evidenceRefs || [])].filter(Boolean));
+  return result.evidence.filter(item => ids.has(item.id));
+}
+
+function hasCurrentDrift(claim: Claim): boolean {
+  return Boolean(claim.assessment?.diagnostics.includes('CURRENT_STATE_DRIFT'));
+}
+
+function layerSummary(claim: Claim, result: LocalProjectAnalysis | ConnectedLocalProjectAnalysis) {
+  const evidence = evidenceForClaim(claim, result);
+  const connected = evidence.filter(item => item.sourceType === 'CONNECTED');
+  const absence = connected.filter(item => item.data?.observation === 'ABSENCE_OBSERVED');
+  const latestConnected = connected
+    .filter(item => item.data?.connectedSnapshot)
+    .sort((a, b) => Date.parse(b.data.connectedSnapshot.observedAt || b.observedAt) - Date.parse(a.data.connectedSnapshot.observedAt || a.observedAt))[0];
+  return {
+    declared: evidence.some(item => item.sourceType === 'DECLARATION') || claim.source === 'DECLARATION',
+    observed: evidence.some(item => item.sourceType === 'STATIC'),
+    connected: absence.length ? 'Changed · absent in latest comparable snapshot' : connected.length ? 'Present' : ('connected' in result ? 'No supporting evidence' : 'Not inspected'),
+    latestConnected
+  };
 }
 
 function EvidenceCard({ evidence }: { evidence: Evidence }) {
@@ -103,57 +145,46 @@ function ClaimAssessment({ claim }: { claim: Claim }) {
 }
 
 export function ClaimDetail({ claim, result, onClose }: { claim: Claim; result: LocalProjectAnalysis | ConnectedLocalProjectAnalysis; onClose: () => void }) {
-  const detailEvidenceIds = Array.from(new Set([...claim.provenance.map(item => item.evidenceId), ...(claim.assessment?.evidenceRefs || [])].filter(Boolean)));
-  const referencedEvidence = detailEvidenceIds
-    .map(id => result.evidence.find(evidence => evidence.id === id))
-    .filter((evidence): evidence is Evidence => Boolean(evidence));
+  const referencedEvidence = evidenceForClaim(claim, result);
   const declarationEvidence = referencedEvidence.filter(item => item.sourceType === 'DECLARATION');
   const observedEvidence = referencedEvidence.filter(item => item.sourceType === 'STATIC');
   const connectedEvidence = referencedEvidence.filter(item => item.sourceType === 'CONNECTED');
-  const referencedEvidenceIds = new Set([
-    ...claim.provenance.map(item => item.evidenceId),
-    ...(claim.assessment?.evidenceRefs || [])
-  ].filter(Boolean));
-  const observedRelationships = [
-    ...claim.provenance,
-    ...result.observedClaims.flatMap(observedClaim => observedClaim.provenance)
-  ].filter((item, index, items) => item.sourceType === 'STATIC'
-    && Boolean(item.snippet)
-    && Boolean(item.evidenceId && referencedEvidenceIds.has(item.evidenceId))
-    && items.findIndex(candidate => candidate.evidenceId === item.evidenceId && candidate.snippet === item.snippet) === index);
+  const layers = layerSummary(claim, result);
+  const resource = resourcePresentation(claim);
+  const drift = hasCurrentDrift(claim);
+  const snapshot = layers.latestConnected?.data?.connectedSnapshot;
 
   return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" role="dialog" aria-label="Claim detail">
-    <div className="glass-panel max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-xl p-6">
+    <div className="glass-panel max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-xl p-6">
       <div className="mb-5 flex items-start justify-between gap-4 border-b border-white/10 pb-4">
-        <div><StateBadge state={claim.status} /><h2 className="mt-3 text-lg font-bold text-white">Why did this result occur?</h2></div>
+        <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary-light">Why this result?</p><div className="mt-2 flex flex-wrap items-center gap-3"><h2 className="text-2xl font-bold text-white">{claim.action || claim.predicate} <span className="font-normal text-[#8d90a0]">· {resource.label}</span></h2><StateBadge state={claim.status} /></div></div>
         <button onClick={onClose} aria-label="Close detail" className="rounded p-2 text-[#8d90a0] hover:bg-white/5 hover:text-white"><X /></button>
       </div>
-      <div className="grid gap-4 lg:grid-cols-3">
-        <section className="rounded-lg border border-white/10 bg-[#031427] p-4">
-          <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-primary-light">Declared</h3>
-          {claim.source === 'DECLARATION' ? <ClaimFields claim={claim} /> : <p className="text-xs text-[#8d90a0]">No declaration is represented by this result.</p>}
-          <div className="mt-4 space-y-2">{declarationEvidence.map(item => <EvidenceCard key={item.id} evidence={item} />)}</div>
-        </section>
-        <section className="rounded-lg border border-white/10 bg-[#031427] p-4">
-          <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-amber-200">Connected</h3>
-          {connectedEvidence.length ? <div className="space-y-2">{connectedEvidence.map(item => <EvidenceCard key={item.id} evidence={item} />)}</div> : <p className="text-xs text-[#8d90a0]">No CONNECTED evidence is referenced by this result.</p>}
-          <p className="mt-3 text-xs text-[#8d90a0]">RUNTIME — no evidence available; not implemented.</p>
-        </section>
-        <section className="rounded-lg border border-white/10 bg-[#031427] p-4">
-          <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-violet-200">Observed</h3>
-          {observedEvidence.length ? <div className="space-y-2">{observedEvidence.map(item => <EvidenceCard key={item.id} evidence={item} />)}</div> : <p className="text-xs text-[#8d90a0]">No supporting static observation is referenced by this result.</p>}
-          {observedRelationships.length > 0 && <div className="mt-3 rounded border border-white/10 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-[#8d90a0]">Observed relationship</p>{observedRelationships.map((item, index) => <p key={`${item.artifact}-${index}`} className="mt-2 font-mono text-xs text-violet-100">{item.snippet?.replaceAll(' -> ', ' → ')}</p>)}</div>}
-        </section>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <section className="rounded-lg border border-primary/20 bg-primary/5 p-4"><h3 className="text-xs font-bold uppercase tracking-wider text-primary-light">Declared</h3><p className="mt-2 text-sm text-white">{layers.declared ? '✓ This capability is declared.' : '— No compatible declaration covers this capability.'}</p>{declarationEvidence[0] && <p className="mt-2 text-xs text-[#8d90a0]">Manifest evidence: {compactPath(declarationEvidence[0].provenance.file)}</p>}</section>
+        <section className="rounded-lg border border-violet-300/20 bg-violet-300/5 p-4"><h3 className="text-xs font-bold uppercase tracking-wider text-violet-200">Observed</h3><p className="mt-2 text-sm text-white">{layers.observed ? '✓ Compatible local evidence was found.' : '— No compatible local evidence is referenced.'}</p>{observedEvidence[0] && <p className="mt-2 text-xs text-[#8d90a0]">{compactPath(observedEvidence[0].provenance.file)}</p>}</section>
+        <section className={`rounded-lg border p-4 ${drift ? 'border-amber-300/30 bg-amber-300/10' : 'border-emerald-300/20 bg-emerald-300/5'}`}><h3 className="text-xs font-bold uppercase tracking-wider text-amber-200">Connected</h3><p className="mt-2 text-sm text-white">{drift ? '⚠ The capability is absent from the latest accepted comparable snapshot.' : connectedEvidence.length ? '✓ The inspected source reported this capability.' : '— No connected evidence is referenced.'}</p>{snapshot && <p className="mt-2 text-xs text-[#8d90a0]">Observed at {new Date(snapshot.observedAt || layers.latestConnected?.observedAt).toLocaleString()} {snapshot.revision ? `· Revision ${snapshot.revision}` : ''}</p>}</section>
+        <section className="rounded-lg border border-white/10 bg-[#031427] p-4"><h3 className="text-xs font-bold uppercase tracking-wider text-[#8d90a0]">Runtime</h3><p className="mt-2 text-sm text-[#d3e4fe]">— No runtime evidence is available.</p></section>
       </div>
+      {drift && <section className="mt-4 rounded-lg border border-amber-300/30 bg-amber-300/10 p-4" aria-label="What changed"><h3 className="text-xs font-bold uppercase tracking-wider text-amber-100">What changed?</h3><div className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><p className="text-[#8d90a0]">Previous inspection</p><p className="mt-1 font-semibold text-white">{claim.action} present</p></div><div><p className="text-[#8d90a0]">Latest inspection</p><p className="mt-1 font-semibold text-white">{claim.action} absent</p>{snapshot?.revision && <p className="mt-1 text-xs text-[#8d90a0]">Revision {snapshot.revision}</p>}</div></div><p className="mt-3 font-semibold text-amber-100">Current connected configuration changed.</p></section>}
+      <section className="mt-4 rounded-lg border border-white/10 bg-[#031427] p-4"><h3 className="text-xs font-bold uppercase tracking-wider text-white">What tAIdyup doesn't know</h3><ul className="mt-3 grid gap-2 text-sm text-[#8d90a0] sm:grid-cols-2"><li>? Execution is not established.</li><li>? Authorization is not established.</li><li>? Safety and compliance are not established.</li><li>? Runtime evidence is unavailable.</li></ul></section>
       {claim.status === 'UNDECLARED_OBSERVATION' && <section className="mt-4 rounded-lg border border-violet-400/20 bg-violet-400/5 p-4 text-xs text-violet-100">This is an observed capability that is not currently covered by a reconciled declaration.</section>}
-      <ClaimAssessment claim={claim} />
-      <section className="mt-4 rounded-lg border border-white/10 bg-[#031427] p-4">
-        <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-white">Reconciled result</h3>
-        <div className="flex flex-wrap items-center gap-3"><StateBadge state={claim.status} /></div>
-        <div className="mt-4 space-y-2 text-xs">{claim.provenance.map((item, index) => <div key={`${item.artifact}-${index}`} className="rounded border border-white/10 p-3"><span className="font-mono text-primary-light">{item.sourceType}</span> · <span className="break-all">{item.artifact}</span>{item.location && <> · <span className="font-mono">{item.location}</span></>}{item.collectorId && <> · {item.collectorId}</>}</div>)}</div>
-      </section>
+      <details className="mt-4 rounded-lg border border-white/10 bg-[#031427] p-4"><summary className="cursor-pointer text-sm font-bold text-white">Technical evidence</summary><ClaimAssessment claim={claim} /><div className="mt-4 grid gap-3">{referencedEvidence.map(item => <EvidenceCard key={item.id} evidence={item} />)}</div><details className="mt-4 rounded border border-white/10 p-3"><summary className="cursor-pointer text-xs font-semibold text-primary-light">Full provenance</summary><div className="mt-3 space-y-2 text-xs">{claim.provenance.map((item, index) => <div key={`${item.artifact}-${index}`} className="break-all rounded border border-white/10 p-3"><span className="font-mono text-primary-light">{item.sourceType}</span> · {item.artifact}{item.location && <> · <span className="font-mono">{item.location}</span></>}{item.collectorId && <> · {item.collectorId}</>}{item.snippet && <p className="mt-2 font-mono text-violet-100">{item.snippet.replaceAll(' -> ', ' → ')}</p>}</div>)}</div></details>{resource.raw && <details className="mt-3 rounded border border-white/10 p-3"><summary className="cursor-pointer text-xs font-semibold text-primary-light">View raw resource</summary><pre className="mt-3 whitespace-pre-wrap break-all text-xs text-[#8d90a0]">{resource.raw}</pre></details>}</details>
     </div>
   </div>;
+}
+
+function CapabilityCard({ claim, result, onOpen }: { claim: Claim; result: LocalProjectAnalysis | ConnectedLocalProjectAnalysis; onOpen: () => void }) {
+  const layers = layerSummary(claim, result);
+  const resource = resourcePresentation(claim);
+  const drift = hasCurrentDrift(claim);
+  const snapshot = layers.latestConnected?.data?.connectedSnapshot;
+  return <article className={`rounded-xl border p-5 ${drift ? 'border-amber-300/40 bg-amber-300/5' : 'border-white/10 bg-[#07192e]'}`} data-capability-action={claim.action} data-epistemic-state={claim.status}>
+    <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-[10px] uppercase tracking-wider text-[#8d90a0]">Capability</p><h3 className="mt-1 text-2xl font-bold text-white">{claim.action}</h3><p className="mt-1 text-sm text-[#d3e4fe]">{resource.label}{resource.detail ? <span className="text-[#8d90a0]"> · {resource.detail}</span> : null}</p></div><StateBadge state={claim.status} /></div>
+    {drift && <div className="mt-4 rounded-lg border border-amber-300/30 bg-amber-300/10 p-3" data-drift-outcome="CURRENT_STATE_DRIFT"><div className="flex items-center gap-2"><span className="rounded bg-amber-200 px-2 py-0.5 text-[10px] font-bold text-[#312000]">DRIFT</span><p className="text-sm font-semibold text-amber-100">Current connected configuration changed.</p></div></div>}
+    <div className="mt-4 grid gap-2 text-xs sm:grid-cols-4" aria-label="Capability evidence layers"><div className="rounded border border-white/10 p-3"><p className="uppercase text-[#8d90a0]">Declared</p><p className="mt-1 font-semibold text-white">{layers.declared ? '✓ Supported' : '— Not covered'}</p></div><div className="rounded border border-white/10 p-3"><p className="uppercase text-[#8d90a0]">Observed</p><p className="mt-1 font-semibold text-white">{layers.observed ? '✓ Supported' : '— No evidence'}</p></div><div className="rounded border border-white/10 p-3"><p className="uppercase text-[#8d90a0]">Connected</p><p className={`mt-1 font-semibold ${drift ? 'text-amber-100' : 'text-white'}`}>{drift ? '⚠ Changed' : layers.connected === 'Present' ? '✓ Present' : layers.connected}</p>{snapshot && <p className="mt-1 text-[10px] text-[#8d90a0]">Observed {new Date(snapshot.observedAt || layers.latestConnected?.observedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>}</div><div className="rounded border border-white/10 p-3"><p className="uppercase text-[#8d90a0]">Runtime</p><p className="mt-1 font-semibold text-[#8d90a0]">— No evidence</p></div></div>
+    <div className="mt-4 flex justify-end"><button onClick={onOpen} className="rounded border border-primary/40 px-4 py-2 text-xs font-semibold text-primary-light hover:bg-primary/10">{drift ? 'View change / Why?' : 'Why?'}</button></div>
+  </article>;
 }
 
 export function AnalysisView({ state }: { state: AnalysisUiState }) {
@@ -179,18 +210,23 @@ export function AnalysisView({ state }: { state: AnalysisUiState }) {
     observed: result.evidence.filter(item => item.sourceType === 'STATIC').length,
     connected: result.evidence.filter(item => item.sourceType === 'CONNECTED').length
   };
+  const capabilities = claims.filter(claim => Boolean(claim.action));
+  const otherClaims = claims.filter(claim => !claim.action);
+  const attentionCount = capabilities.filter(claim => claim.status !== 'SUPPORTED').length;
+  const changedCount = capabilities.filter(hasCurrentDrift).length;
 
   return <div className="space-y-6" data-ui-state="success">
     <section className="glass-panel rounded-xl p-5">
-      <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs uppercase tracking-wider text-[#8d90a0]">Analyzed project</p><h2 className="mt-1 text-xl font-bold text-white">{result.project.name}</h2><p className="mt-1 break-all font-mono text-xs text-[#8d90a0]">{result.project.targetPath}</p></div><div className="rounded border border-primary/30 bg-primary/10 px-3 py-2 text-xs"><span className="text-[#8d90a0]">Manifest</span><strong className="ml-2 font-mono text-primary-light">{result.manifest.status}</strong><p className="mt-1 max-w-sm break-all font-mono text-[10px] text-[#8d90a0]">{result.manifest.path}</p></div></div>
+      <div className="flex flex-wrap items-start justify-between gap-5"><div><p className="text-xs uppercase tracking-wider text-[#8d90a0]">System</p><h2 className="mt-1 text-2xl font-bold text-white">{result.project.name}</h2><p className="mt-2 text-xs text-[#8d90a0]" title={result.project.targetPath}>{compactPath(result.project.targetPath)}</p></div><div className="grid grid-cols-2 gap-x-7 gap-y-2 text-sm sm:grid-cols-4"><div><p className="text-[10px] uppercase text-[#8d90a0]">Subjects</p><p className="mt-1 text-xl font-bold text-white">{result.subjects.length}</p></div><div><p className="text-[10px] uppercase text-[#8d90a0]">Capabilities</p><p className="mt-1 text-xl font-bold text-white">{capabilities.length}</p></div><div><p className="text-[10px] uppercase text-[#8d90a0]">Need evidence</p><p className="mt-1 text-xl font-bold text-amber-100">{attentionCount}</p></div><div><p className="text-[10px] uppercase text-[#8d90a0]">Changed</p><p className="mt-1 text-xl font-bold text-amber-100">{changedCount}</p></div></div></div>
     </section>
     <section aria-label="Canonical summary"><h2 className="mb-3 text-sm font-bold text-white">Reconciliation summary</h2><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{summaryStates.map(item => <article key={item.state} className="glass-panel rounded-lg p-4" data-epistemic-state={item.state}><StateBadge state={item.state} /><p className="mt-3 text-3xl font-bold text-white">{result.reconciliation.summary[item.key]}</p><p className="mt-1 text-xs text-[#8d90a0]">{item.label}</p></article>)}</div></section>
     <section className="glass-panel rounded-xl p-5" aria-label="Evidence layers"><div className="grid gap-3 sm:grid-cols-4"><div><p className="text-[10px] uppercase text-[#8d90a0]">Declared</p><p className="mt-1 text-xl font-bold">{layers.declared}</p></div><div><p className="text-[10px] uppercase text-[#8d90a0]">Observed</p><p className="mt-1 text-xl font-bold">{layers.observed}</p></div><div><p className="text-[10px] uppercase text-[#8d90a0]">Connected</p><p className="mt-1 text-xl font-bold">{connected ? layers.connected : 'Not inspected'}</p></div><div><p className="text-[10px] uppercase text-[#8d90a0]">Runtime</p><p className="mt-1 text-sm font-bold text-[#8d90a0]">Unavailable</p></div></div>{connected && <div className="mt-4 rounded border border-amber-300/20 bg-amber-300/5 p-3 text-xs"><p className="font-bold text-amber-100">Latest inspected snapshot</p><p className="mt-1 font-mono text-amber-100/80">n8n · {connected.snapshot.sourceInstance} · observed at {connected.snapshot.observedAt} · {connected.snapshot.retrievalStatus} · {connected.snapshot.completeness}{connected.snapshot.revision ? ` · revision ${connected.snapshot.revision}` : ''}</p>{connected.absenceEvidences.length > 0 && <p className="mt-2 text-amber-100">Current connected configuration changed. {connected.absenceEvidences.length} scoped absence observation(s) accepted by the Trust Kernel.</p>}{connected.diagnostics.length > 0 && <ul className="mt-2 space-y-1 font-mono text-amber-100/80">{connected.diagnostics.map(item => <li key={item}>{item}</li>)}</ul>}</div>}</section>
-    <section className="glass-panel rounded-xl p-5"><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-bold text-white">Claims explorer</h2><p className="text-xs text-[#8d90a0]">Declared and observed material remain separate. Select a result to inspect its evidence.</p></div><select value={selectedSubject} onChange={event => setSelectedSubject(event.target.value)} className="rounded border border-white/15 bg-[#031427] px-3 py-2 text-xs text-white"><option value="all">All subjects</option>{result.subjects.map(subject => <option key={subject} value={subject}>{subject}</option>)}</select></div>
-      {claims.length === 0 ? <div className="rounded border border-dashed border-white/15 p-8 text-center text-sm text-[#8d90a0]" data-ui-state="empty">No reconciled claims for this selection.</div> : <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead className="border-b border-white/10 text-[10px] uppercase tracking-wider text-[#8d90a0]"><tr><th className="px-3 py-3">Subject</th><th className="px-3 py-3">Predicate</th><th className="px-3 py-3">Action / resource</th><th className="px-3 py-3">Result</th><th className="px-3 py-3"><span className="sr-only">Detail</span></th></tr></thead><tbody className="divide-y divide-white/5">{claims.map(claim => <tr key={claim.id}><td className="px-3 py-3 font-mono text-white">{claim.subject}</td><td className="px-3 py-3 font-mono">{claim.predicate}</td><td className="px-3 py-3"><span className="font-mono text-white">{claim.action || '—'}</span><span className="ml-2 break-all text-[#8d90a0]">{claim.resource || '—'}</span></td><td className="px-3 py-3"><StateBadge state={claim.status} /></td><td className="px-3 py-3 text-right"><button onClick={() => setSelectedClaim(claim)} className="rounded border border-white/15 px-3 py-1.5 text-primary-light hover:border-primary/50">Why?</button></td></tr>)}</tbody></table></div>}
+    <section className="glass-panel rounded-xl p-5" aria-label="Authority explorer"><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary-light">Authority explorer</p><h2 className="mt-1 text-xl font-bold text-white">Capabilities</h2><p className="mt-1 text-xs text-[#8d90a0]">Conclusion first. Open Why? for explanation and technical proof.</p></div><select value={selectedSubject} onChange={event => setSelectedSubject(event.target.value)} className="rounded border border-white/15 bg-[#031427] px-3 py-2 text-xs text-white"><option value="all">All subjects</option>{result.subjects.map(subject => <option key={subject} value={subject}>{subject}</option>)}</select></div>
+      {capabilities.length === 0 ? <div className="rounded border border-dashed border-white/15 p-8 text-center text-sm text-[#8d90a0]" data-ui-state="empty">No reconciled capabilities for this selection.</div> : <div className="grid gap-4 lg:grid-cols-2">{capabilities.map(claim => <CapabilityCard key={claim.id} claim={claim} result={result} onOpen={() => setSelectedClaim(claim)} />)}</div>}
+      {otherClaims.length > 0 && <details className="mt-5 rounded-lg border border-white/10 bg-[#031427] p-4"><summary className="cursor-pointer text-sm font-semibold text-white">Other claims and declarations <span className="ml-2 text-[#8d90a0]">{otherClaims.length}</span></summary><div className="mt-3 space-y-2">{otherClaims.map(claim => <button key={claim.id} onClick={() => setSelectedClaim(claim)} className="flex w-full items-center justify-between gap-3 rounded border border-white/10 p-3 text-left text-xs"><span><span className="font-mono text-white">{claim.predicate}</span><span className="ml-2 text-[#8d90a0]">{claim.subject}</span></span><StateBadge state={claim.status} /></button>)}</div></details>}
     </section>
-    <section className="glass-panel rounded-xl p-5" aria-label="Technical findings"><div className="mb-4"><h2 className="font-bold text-white">Technical findings</h2><p className="text-xs text-[#8d90a0]">Findings emitted by the current reconciliation result.</p></div>{result.reconciliation.findings.length === 0 ? <p className="rounded border border-dashed border-white/15 p-6 text-center text-sm text-[#8d90a0]">No technical findings were emitted.</p> : <div className="space-y-3">{result.reconciliation.findings.map(finding => <article key={finding.id} className="rounded-lg border border-white/10 bg-[#07192e] p-4"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-bold text-white">{finding.title}</h3><span className="rounded border border-white/15 px-2 py-1 font-mono text-[10px]">{finding.severity}</span></div><p className="mt-2 text-xs text-[#8d90a0]">{finding.description}</p>{finding.type === 'UNDECLARED_CRITICAL_CAPABILITY' && <p className="mt-3 rounded border border-rose-300/20 bg-rose-300/5 p-3 text-xs text-rose-100">Critical refers to the authority involved and the fact that it is not covered by a fully reconciled declaration. This finding does not by itself indicate a security vulnerability.</p>}<p className="mt-3 break-all font-mono text-[10px] text-primary-light">{finding.provenance.file}{finding.provenance.location ? ` · ${finding.provenance.location}` : ''}</p></article>)}</div>}</section>
-    <section className="glass-panel rounded-xl p-5"><div className="mb-4 flex items-center gap-2"><FileCode2 className="text-primary-light" /><div><h2 className="font-bold text-white">Evidence inspector</h2><p className="text-xs text-[#8d90a0]">Declared, local observed, and explicitly inspected CONNECTED evidence remain distinguishable.</p></div></div><div className="grid gap-3 lg:grid-cols-2">{result.evidence.map(item => <EvidenceCard key={item.id} evidence={item} />)}</div>{result.evidence.length === 0 && <p className="rounded border border-dashed border-white/15 p-6 text-center text-sm text-[#8d90a0]">No evidence was emitted.</p>}</section>
+    {result.reconciliation.findings.length === 0 ? <details className="glass-panel rounded-xl p-4" aria-label="Technical findings"><summary className="cursor-pointer text-sm font-semibold text-white">Technical findings <span className="ml-2 font-normal text-[#8d90a0]">None emitted</span></summary></details> : <section className="glass-panel rounded-xl p-5" aria-label="Technical findings"><h2 className="mb-4 font-bold text-white">Technical findings</h2><div className="space-y-3">{result.reconciliation.findings.map(finding => <article key={finding.id} className="rounded-lg border border-white/10 bg-[#07192e] p-4"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-bold text-white">{finding.title}</h3><span className="rounded border border-white/15 px-2 py-1 font-mono text-[10px]">{finding.severity}</span></div><p className="mt-2 text-xs text-[#8d90a0]">{finding.description}</p>{finding.type === 'UNDECLARED_CRITICAL_CAPABILITY' && <p className="mt-3 rounded border border-rose-300/20 bg-rose-300/5 p-3 text-xs text-rose-100">Critical refers to the authority involved and the fact that it is not covered by a fully reconciled declaration. This finding does not by itself indicate a security vulnerability.</p>}<details className="mt-3"><summary className="cursor-pointer text-xs text-primary-light">Finding provenance</summary><p className="mt-2 break-all font-mono text-[10px] text-primary-light">{finding.provenance.file}{finding.provenance.location ? ` · ${finding.provenance.location}` : ''}</p></details></article>)}</div></section>}
+    <details className="glass-panel rounded-xl p-5"><summary className="flex cursor-pointer list-none items-center gap-2"><FileCode2 className="text-primary-light" /><span className="font-bold text-white">Evidence inspector</span><span className="text-xs text-[#8d90a0]">{result.evidence.length} records · technical details</span></summary><p className="mt-3 text-xs text-[#8d90a0]">Declared, local observed, and explicitly inspected CONNECTED evidence remain distinguishable.</p><div className="mt-4 grid gap-3 lg:grid-cols-2">{result.evidence.map(item => <EvidenceCard key={item.id} evidence={item} />)}</div>{result.evidence.length === 0 && <p className="mt-4 text-sm text-[#8d90a0]">No evidence was emitted.</p>}</details>
     <section className="rounded-lg border border-white/10 bg-[#07192e] p-4 text-xs text-[#8d90a0]"><Layers3 className="mr-2 inline h-4 w-4" />Supported means compatible declaration and evidence under current Core rules. CONNECTED reports configuration at an observed time; it does not establish execution, authorization, safety, or compliance. Unknown is not failure; unverified is not false.</section>
     {selectedClaim && <ClaimDetail claim={selectedClaim} result={result} onClose={() => setSelectedClaim(null)} />}
   </div>;
