@@ -41,6 +41,6 @@ Because portable browsers do not reveal an absolute filesystem path from a direc
 
 ## Claim boundary
 
-The UI visualizes static and declaration evidence only. `CONNECTED` and `RUNTIME` are shown solely as unavailable future layers. A supported claim is not a statement about execution, authorization, safety, or compliance. Unknown is not failure, and unverified is not false.
+The UI visualizes declaration and static evidence, and can explicitly request one point-in-time n8n CONNECTED inspection through the local bridge. The browser sends only the environment-variable name; the bridge resolves the token in the local Node process and reuses `analyzeConnectedN8nWorkflow()` and its guarded transport. There is no automatic connection, polling, browser-to-n8n request, credential validation, or execution request.
 
-Technical Passport, SARIF, visual diff/history, manifest editing, hosted accounts, regulation, connected evidence, and runtime evidence are intentionally outside Phase 1.
+Set the token in the environment that starts `npm run ui`, enter the local project and explicit CONNECTED fields, review the disclosed GET-only boundary, then start the inspection. A failed CONNECTED request does not replace an already displayed local result. `RUNTIME` remains unavailable. Technical Passport, SARIF, report history, manifest editing, hosted accounts, regulation, runtime evidence, and continuous monitoring remain outside the UI.

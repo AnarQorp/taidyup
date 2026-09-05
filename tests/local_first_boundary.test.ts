@@ -21,6 +21,7 @@ function run() {
 
   const adapter = fs.readFileSync(path.resolve('src/frontend/adapters/localAnalysisAdapter.ts'), 'utf-8');
   assert.match(adapter, /fetch\('\/local-api\/analyze'/, 'browser adapter may call only the same-origin local bridge');
+  assert.match(adapter, /fetch\('\/local-api\/connected-n8n'/, 'CONNECTED browser adapter may call only the same-origin local bridge');
   assert.ok(!adapter.includes('http://') && !adapter.includes('https://'), 'browser adapter must not call an absolute network endpoint');
 }
 

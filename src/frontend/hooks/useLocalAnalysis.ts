@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import type { LocalProjectAnalysis } from '../../application/analyzeLocalProject.js';
+import type { ConnectedLocalProjectAnalysis } from '../../application/analyzeConnectedLocalProject.js';
 import { requestLocalAnalysis } from '../adapters/localAnalysisAdapter.js';
 
 export type AnalysisUiState =
   | { status: 'idle' }
   | { status: 'loading'; targetPath: string }
-  | { status: 'success'; result: LocalProjectAnalysis }
+  | { status: 'success'; result: LocalProjectAnalysis | ConnectedLocalProjectAnalysis }
   | { status: 'error'; message: string; details: string[] };
 
 export function useLocalAnalysis(analyzeProject = requestLocalAnalysis) {

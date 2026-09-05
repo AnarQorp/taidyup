@@ -30,8 +30,10 @@ function run() {
   assert.match(success, /Declared and observed material remain separate/);
   assert.match(success, /data-source-type="DECLARATION"/);
   assert.match(success, /data-source-type="STATIC"/);
-  assert.match(success, /CONNECTED — not available in Alpha/);
-  assert.match(success, /RUNTIME — not available in Alpha/);
+  assert.match(success, />Connected</);
+  assert.match(success, /Not inspected/);
+  assert.match(success, />Runtime</);
+  assert.match(success, /Unavailable/);
   assert.match(success, /Technical findings/);
   assert.match(success, /TEST ONLY declaration conflict/);
 

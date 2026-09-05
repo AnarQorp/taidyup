@@ -37,7 +37,7 @@ It does not turn configuration into certainty. It preserves the distance between
 
 Use the **graphical interface** to explore your AI: move from subjects and capabilities into reconciliation states, evidence, provenance, and **Why?** Use the **CLI and machine-readable outputs** to integrate tAIdyup into development workflows, automate analysis, generate evidence artifacts, compare reports, and inspect supported current n8n configuration.
 
-For local analysis, the graphical interface and CLI share the same reconciliation semantics and Trust Kernel. The graphical interface currently covers declarations and local static evidence; CONNECTED snapshots, report diff, SARIF, and the Technical Passport remain CLI-only.
+For local analysis, the graphical interface and CLI share the same reconciliation semantics and Trust Kernel. The graphical interface covers declarations and local static evidence and can explicitly inspect one supported n8n CONNECTED source. Report diff, SARIF, and the Technical Passport remain CLI-only.
 
 Run the current repository UI:
 
@@ -295,7 +295,7 @@ tAIdyup is an Early Alpha. Its useful limits include:
 - CONNECTED snapshots are point-in-time, not continuous monitoring;
 - no RUNTIME evidence layer is implemented;
 - subworkflow authority is not automatically flattened;
-- the graphical interface currently covers local declaration/static analysis, not CONNECTED, diff, Passport, or SARIF;
+- the graphical interface supports explicit n8n CONNECTED inspection, but not diff, Passport, SARIF, runtime evidence, or monitoring;
 - tAIdyup does not establish authorization, safety, security, or compliance.
 
 `UNKNOWN`, `UNVERIFIED`, and `UNMAPPED` are legitimate results. They identify the edge of current evidence instead of hiding it.

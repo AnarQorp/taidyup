@@ -32,6 +32,7 @@ export async function analyzeConnectedN8nWorkflow(input: {
   workflowId: string;
   observedArtifactPath?: string;
   previousConnectedEvidences?: Evidence[];
+  additionalEvidences?: Evidence[];
   declaredClaims?: Claim[];
   declarationEvidence?: Evidence[];
 }): Promise<ConnectedN8nAnalysis> {
@@ -44,7 +45,7 @@ export async function analyzeConnectedN8nWorkflow(input: {
     item.data?.connectedSnapshot?.sourceInstance === identity.sourceInstance && item.data?.connectedSnapshot?.scope === identity.scope);
   const priorComparable = [...observed, ...previous];
   const absenceEvidences = absences(priorComparable, connected.evidences, connected);
-  const allEvidence = [...(input.declarationEvidence ?? []), ...observed, ...previous, ...connected.evidences, ...absenceEvidences];
+  const allEvidence = [...(input.declarationEvidence ?? []), ...(input.additionalEvidences ?? []), ...observed, ...previous, ...connected.evidences, ...absenceEvidences];
   const reconciliation = ReconciliationEngine.reconcile(input.declaredClaims ?? [], allEvidence);
   return { ...connected, observedEvidences: observed, absenceEvidences, reconciliation };
 }
