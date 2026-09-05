@@ -35,12 +35,9 @@ It does not turn configuration into certainty. It preserves the distance between
 
 ## See your AI, not just another report
 
-tAIdyup has two developer surfaces:
+Use the **graphical interface** to explore your AI: move from subjects and capabilities into reconciliation states, evidence, provenance, and **Why?** Use the **CLI and machine-readable outputs** to integrate tAIdyup into development workflows, automate analysis, generate evidence artifacts, compare reports, and inspect supported current n8n configuration.
 
-- **Graphical interface:** explore a local project's subjects, claims, five reconciliation states, dimensional assessments, diagnostics, evidence, provenance, and the answer to **Why?**
-- **CLI and machine-readable outputs:** analyze, validate, automate, generate evidence artifacts, compare reports, and explicitly inspect supported current n8n configuration.
-
-For local source analysis, both surfaces use the same application path, ScannerAdapter, Trust Kernel, and `ReconciledTrustState`. The current graphical interface is intentionally narrower: it visualizes local declaration and static evidence, but does not yet ingest CONNECTED snapshots, report diff, SARIF, or the Technical Passport.
+For local analysis, the graphical interface and CLI share the same reconciliation semantics and Trust Kernel. The graphical interface currently covers declarations and local static evidence; CONNECTED snapshots, report diff, SARIF, and the Technical Passport remain CLI-only.
 
 Run the current repository UI:
 
@@ -54,8 +51,6 @@ Then open `http://127.0.0.1:3001` and enter the absolute path of an existing loc
 
 <!-- SCREENSHOT_RECOMMENDED_AFTER_UI_POLISH: add a redacted, path-neutral capture of the real local UI when a reproducible public demo fixture is available. -->
 
-The loopback bridge binds to `127.0.0.1`, accepts a local project path, and returns the Core's typed local analysis. It does not parse CLI text or recreate reconciliation logic in the browser.
-
 ## Check apparent authority dimension by dimension
 
 A declaration is more than an action name. tAIdyup assesses the subject, predicate, action, resource, and declared constraints against relevant evidence.
@@ -67,7 +62,7 @@ Conceptual example:
 | Declared `READ` repository | `SUPPORTED` | Every mandatory dimension has sufficient compatible evidence. |
 | Declared `WRITE` files | `UNVERIFIED` | The available evidence does not establish every required binding, resource, or constraint dimension. |
 | Declared `CANNOT EXECUTE` shell | `CONFLICT` | Bound evidence explicitly contradicts the prohibition. |
-| Observed agent-bound `EXECUTE` shell | `UNDECLARED_OBSERVATION` | Consequential configured authority was observed without a covering declaration. |
+| Observed agent-bound `EXECUTE` shell | `UNDECLARED_OBSERVATION` | Sufficiently bound evidence supports the capability, but no compatible declaration covers it. |
 
 This table illustrates the model; it is not a claim about a particular project.
 
@@ -86,7 +81,7 @@ RUNTIME                  future; not implemented
     ↓
 Trust Kernel
     ↓
-ReconciledTrustState
+reconciled result
 ```
 
 The boundaries matter:
@@ -106,19 +101,30 @@ tAIdyup requires evidence for subject, capability, and resource relationships. S
 
 ## See configured-authority drift
 
-The current CONNECTED V0 has been validated against a disposable n8n 2.37.10 instance and a synthetic workflow. At T1, an identified workflow revision reported an explicit AI Agent → Gmail tool relationship that mapped to configured `SEND`. An owner-reviewed declaration, local artifact evidence, and the CONNECTED snapshot reconciled as `SUPPORTED`.
-
-After the Gmail tool was removed outside the collector, a later complete and comparable snapshot produced:
+The current CONNECTED V0 has been validated against a disposable n8n 2.37.10 instance and a synthetic workflow:
 
 ```text
-UNVERIFIED
-CURRENT_STATE_DRIFT
-CONNECTED_ABSENCE_OBSERVED
+T1
+Declared SEND    ✓
+Observed SEND    ✓
+Connected SEND   ✓
+→ SUPPORTED
+
+        n8n configuration changes
+
+T2
+Declared SEND    ✓
+Observed SEND    ✓
+Connected SEND   absent
+→ UNVERIFIED
+→ CURRENT_STATE_DRIFT
 ```
 
-The earlier evidence remained in provenance. This established point-in-time **configured-authority drift**. It did not establish that email was executed, that a credential was valid, that the action was authorized, or that the system was compliant. tAIdyup does not continuously monitor n8n.
+At T1, the workflow revision reported an explicit AI Agent → Gmail tool relationship that mapped to configured `SEND`. After the Gmail tool was removed outside the collector, T2 also emitted `CONNECTED_ABSENCE_OBSERVED`; the earlier evidence remained in provenance.
 
-Report diff is a separate operation: `taidyup diff` compares two saved `ReconciledTrustState` reports. CONNECTED drift compares sufficiently identified, scoped, complete, and time-stamped evidence; silence in a failed or partial retrieval is never treated as absence.
+tAIdyup established that the supported current configuration changed. It did **not** establish email execution, credential validity, authorization, or compliance. This is an explicit point-in-time comparison, not continuous monitoring.
+
+Report diff is separate: `taidyup diff` compares two saved results. Neither a failed nor a partial CONNECTED retrieval is treated as evidence of absence.
 
 ## Try it
 
@@ -186,8 +192,7 @@ CONNECTED V0:
 - uses bounded workflow-list and exact-workflow `GET` requests;
 - rejects redirects and mutating HTTP methods;
 - reads the token only from the named environment variable;
-- sanitizes current configuration before local evidence processing;
-- performs analysis and reconciliation locally;
+- sanitizes current configuration and reconciles it locally;
 - does not call credential or execution endpoints;
 - does not validate credentials, infer authorization, execute workflows, poll, or monitor.
 
@@ -213,15 +218,11 @@ Coverage is pattern-based and incomplete. A target not analyzed or recognized is
 
 ### Local workflow artifacts
 
-A conservative, version-aware subset of local n8n workflow JSON. The adapter recognizes selected AI Agent, tool, model, memory, database, email, command, Code, HTTP, and subworkflow semantics. Agent capability binding requires a supported explicit typed graph relationship; unsupported nodes and versions remain `UNMAPPED`.
-
-Expressions are not evaluated, disabled tools do not emit enabled agent-bound capabilities, pinned data is not runtime evidence, and child workflow authority is not flattened automatically.
+A conservative, version-aware subset of local n8n workflow JSON. Selected agent, tool, model, memory, and consequential-operation semantics are mapped only when supported graph relationships justify them. Expressions are not evaluated, and unsupported nodes or versions remain `UNMAPPED`.
 
 ### CONNECTED n8n current configuration
 
-An explicit point-in-time retrieval of current configuration for a selected n8n workflow. Evidence retains source, workflow/revision locator, retrieval time, snapshot completeness, graph path, mapping rule, and sanitized provenance where available.
-
-`active` configuration is not execution. A current draft is not assumed to equal an active/published version. A credential reference is not proof of credential existence, validity, scope, or authorization.
+An explicit point-in-time retrieval for one selected workflow, retaining its current configuration, identity/revision context, completeness, and sanitized provenance. It does not turn `active` into executed, equate draft with published state, or treat a credential reference as credential validity or authorization.
 
 ### Runtime
 
@@ -249,7 +250,7 @@ These outputs are available through the CLI. They are not currently views inside
 
 ## How the Trust Kernel works
 
-The Trust Kernel reconciles owner-reviewed declarations with evidence. It does not guess intent or treat a detector hit as universal truth.
+The Trust Kernel prevents evidence from becoming a stronger claim than it can support. It reconciles owner-reviewed declarations without guessing intent or treating a detector hit as universal truth.
 
 ```text
 Evidence relevant to a claim
@@ -261,7 +262,7 @@ dimensional reconciliation
 ReconciledTrustState + diagnostics + provenance
 ```
 
-Evidence selection is identity-, scope-, dimension-, provenance-, and time-aware. A partial CONNECTED snapshot can establish presence, but only an appropriately scoped, successful, complete, comparable snapshot can establish absence. A newer observation is not automatically stronger in every dimension.
+Reconciliation considers identity, scope, dimensions, provenance, and time. Partial or failed CONNECTED retrievals cannot establish absence, and newer evidence is not automatically stronger in every dimension. The detailed semantic contract lives in [the epistemic model](docs/EPISTEMIC_MODEL.md).
 
 ## Local-first, with an explicit network boundary
 
