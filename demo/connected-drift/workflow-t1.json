@@ -1,0 +1,38 @@
+{
+  "id": "wf-1",
+  "name": "Synthetic Coding Agent — T1",
+  "active": false,
+  "versionId": "demo-revision-t1",
+  "activeVersionId": null,
+  "nodes": [
+    {
+      "id": "agent",
+      "name": "Coding Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "parameters": {}
+    },
+    {
+      "id": "gmail",
+      "name": "Gmail",
+      "type": "@n8n/n8n-nodes-langchain.gmailTool",
+      "typeVersion": 2,
+      "parameters": {
+        "operation": "send"
+      }
+    }
+  ],
+  "connections": {
+    "Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "Coding Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

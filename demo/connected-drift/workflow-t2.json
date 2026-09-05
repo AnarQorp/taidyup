@@ -1,0 +1,17 @@
+{
+  "id": "wf-1",
+  "name": "Synthetic Coding Agent — T2",
+  "active": false,
+  "versionId": "demo-revision-t2",
+  "activeVersionId": null,
+  "nodes": [
+    {
+      "id": "agent",
+      "name": "Coding Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "parameters": {}
+    }
+  ],
+  "connections": {}
+}

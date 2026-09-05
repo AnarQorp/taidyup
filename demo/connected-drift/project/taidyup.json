@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "project": "Synthetic Coding Agent",
+  "agents": [
+    {
+      "id": "n8n:wf-1:agent",
+      "name": "Synthetic Coding Agent",
+      "purpose": "Demonstrate evidence-backed configured authority without external effects",
+      "owner": {
+        "name": "Synthetic Demo Owner",
+        "email": "demo@example.test"
+      },
+      "capabilities": [
+        {
+          "action": "SEND",
+          "resource": "{\"namespace\":\"workflow\",\"version\":\"0\",\"type\":\"email\",\"scope\":\"outbound\",\"artifact\":\"@n8n/n8n-nodes-langchain.gmailTool\"}"
+        }
+      ]
+    }
+  ]
+}

@@ -21,15 +21,15 @@ function post(port: number, body: unknown): Promise<{ status: number; body: any 
 }
 
 async function run() {
-  const agent = { id: 'agent', name: 'Agent', type: '@n8n/n8n-nodes-langchain.agent', typeVersion: 2, parameters: {} };
-  const gmail = { id: 'gmail', name: 'Mail', type: '@n8n/n8n-nodes-langchain.gmailTool', typeVersion: 2, parameters: { operation: 'send' } };
-  let includeGmail = true; let revision = 1;
-  const workflow = () => ({ id: 'wf-1', name: 'Synthetic UI workflow', active: false, versionId: `revision-${revision}`, activeVersionId: null, nodes: [agent, ...(includeGmail ? [gmail] : [])], connections: includeGmail ? { Mail: { ai_tool: [[{ node: 'Agent', type: 'ai_tool', index: 0 }]] } } : {} });
-  const provider = http.createServer((req, res) => { assert.equal(req.headers['x-n8n-api-key'], 'ui-secret-value'); res.setHeader('content-type', 'application/json'); if (req.url?.startsWith('/api/v1/workflows?')) res.end(JSON.stringify({ data: [{ id: 'wf-1', versionId: `revision-${revision}` }], nextCursor: null })); else res.end(JSON.stringify(workflow())); }).listen(0, '127.0.0.1');
+  const fixtureRoot = path.resolve('demo/connected-drift');
+  const t1Workflow = JSON.parse(fs.readFileSync(path.join(fixtureRoot, 'workflow-t1.json'), 'utf8'));
+  const t2Workflow = JSON.parse(fs.readFileSync(path.join(fixtureRoot, 'workflow-t2.json'), 'utf8'));
+  let includeGmail = true;
+  const workflow = () => includeGmail ? t1Workflow : t2Workflow;
+  const provider = http.createServer((req, res) => { assert.equal(req.headers['x-n8n-api-key'], 'ui-secret-value'); res.setHeader('content-type', 'application/json'); if (req.url?.startsWith('/api/v1/workflows?')) res.end(JSON.stringify({ data: [{ id: 'wf-1', versionId: workflow().versionId }], nextCursor: null })); else res.end(JSON.stringify(workflow())); }).listen(0, '127.0.0.1');
   await once(provider, 'listening'); const providerAddress = provider.address(); assert.ok(providerAddress && typeof providerAddress === 'object');
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'taidyup-ui-connected-'));
-  const emailResource = JSON.stringify({ namespace: 'workflow', version: '0', type: 'email', scope: 'outbound', artifact: '@n8n/n8n-nodes-langchain.gmailTool' });
-  fs.writeFileSync(path.join(root, 'taidyup.json'), JSON.stringify({ version: '1.0', project: 'Synthetic connected UI', agents: [{ id: 'n8n:wf-1:agent', name: 'Synthetic Agent', purpose: 'Fixture only', owner: { name: 'Fixture Owner', email: 'fixture@example.test' }, capabilities: [{ action: 'SEND', resource: emailResource }] }] }));
+  fs.copyFileSync(path.join(fixtureRoot, 'project', 'taidyup.json'), path.join(root, 'taidyup.json'));
   process.env.TAIDYUP_UI_CONNECTED_TOKEN = 'ui-secret-value';
   const bridge = createLocalUiApp().listen(0, '127.0.0.1'); await once(bridge, 'listening'); const bridgeAddress = bridge.address(); assert.ok(bridgeAddress && typeof bridgeAddress === 'object');
   const request = { targetPath: root, baseUrl: `http://127.0.0.1:${providerAddress.port}`, workflowId: 'wf-1', connectionId: 'synthetic-ui', tokenEnv: 'TAIDYUP_UI_CONNECTED_TOKEN', authorityMode: 'CLIENT_ENFORCED_READ_ONLY', allowLoopbackHttp: true };
@@ -37,7 +37,7 @@ async function run() {
     const t1 = await post(bridgeAddress.port, request); assert.equal(t1.status, 200); assert.equal(t1.body.reconciliation.reconciledClaims.find((item: any) => item.action === 'SEND')?.status, 'SUPPORTED');
     assert.doesNotMatch(JSON.stringify(t1.body), /ui-secret-value/);
     const t1Html = renderToStaticMarkup(<AnalysisView state={{ status: 'success', result: t1.body }} />); assert.match(t1Html, /Latest inspected snapshot/); assert.match(t1Html, /n8n:synthetic-ui:/); assert.match(t1Html, /CONNECTED/); assert.match(t1Html, /Runtime/); assert.match(t1Html, /Unavailable/);
-    includeGmail = false; revision = 2;
+    includeGmail = false;
     const t2 = await post(bridgeAddress.port, request); assert.equal(t2.status, 200); const claim = t2.body.reconciliation.reconciledClaims.find((item: any) => item.action === 'SEND'); assert.equal(claim.status, 'UNVERIFIED'); assert.ok(claim.assessment.diagnostics.includes('CURRENT_STATE_DRIFT')); assert.equal(t2.body.connected.absenceEvidences.length, 1);
     const detail = renderToStaticMarkup(<ClaimDetail claim={claim} result={t2.body} onClose={() => {}} />); assert.match(detail, /ABSENCE_OBSERVED/); assert.match(detail, /CURRENT_STATE_DRIFT/); assert.doesNotMatch(detail, /ui-secret-value|AUTHORIZED|EXECUTED/);
     const shell = renderToStaticMarkup(<App />); assert.match(shell, /OPT-IN/); assert.match(shell, /Token value stays in the local Node process/); assert.doesNotMatch(shell, /type="password"/);
