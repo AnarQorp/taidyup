@@ -68,7 +68,7 @@ taidyup init --accept
 taidyup validate .
 ```
 
-This runs locally, proposes non-declarative candidate suggestions, accepts only the owner-reviewed declaration in `agents[]`, then prints the first reconciliation summary: supported, unverified, conflicting, undeclared, and unknown capabilities.
+This runs locally, proposes non-declarative candidate suggestions, accepts only the owner-reviewed declaration in `agents[]`, then prints the reconciliation summary: supported, unverified, conflicting, undeclared, and unknown capabilities.
 
 `--accept` does not promote scanner suggestions. It validates an existing `taidyup.json.draft` whose `agents[]` the owner has explicitly reviewed and completed, then writes only that canonical declaration. tAIdyup is an Early Alpha; its static analysis can miss capabilities or report false positives, and its output is not a certification or legal compliance assessment.
 
@@ -113,7 +113,7 @@ tAIdyup maintains a distinction between two things that are often treated as if 
 
 and
 
-### What its implementation observably enables it to do
+### What local source code and supported workflow artifacts provide evidence that it is configured to do
 
 It then reconciles the two.
 
@@ -151,6 +151,18 @@ Because a declaration is not evidence.
 An observation is not certainty.
 
 And neither one, by itself, is a legal conclusion.
+
+## Local workflow evidence (V0)
+
+tAIdyup can also normalize a deliberately small, versioned subset of local n8n workflow JSON into provider-neutral evidence. It recognizes explicit AI Agent `ai_tool` relationships and conservative mappings for email send, database read/write, command execution, Code tools, and literal HTTP GET.
+
+This support is local artifact analysis only. It does not connect to n8n, access credentials, execute workflows, inspect execution history, or monitor deployments. A configured edge is not proof that a tool was available at runtime or invoked. Credential references are not proof that credentials exist, are valid, active, or have particular scopes. Expressions remain unresolved; disabled tools do not emit available agent-bound capability evidence; subworkflow authority is not flattened without the child artifact.
+
+The adapter hashes the raw workflow artifact, excludes pinned payloads, hashes credential references and parameter values, and carries the exact node and graph path into provenance. Unsupported nodes and versions remain unmapped rather than guessed. The same Trust Kernel then reconciles these observations against owner-reviewed declarations—workflow observations never create declarations or authorization.
+
+The V0 application entrypoint is `analyzeLocalN8nWorkflow()` in `src/application/analyzeLocalWorkflowArtifact.ts`. The normal developer flow remains `taidyup init`, owner review, `taidyup init --accept`, and `taidyup validate .`; dedicated workflow CLI discovery is not advertised in this Alpha.
+
+**Align what you declare with what you build.**
 
 ---
 
@@ -249,11 +261,11 @@ When tAIdyup runs `validate`, every claim is classified into one of 5 distinct e
 
 | Epistemic State | Meaning | Action Needed |
 | :--- | :--- | :--- |
-| **`SUPPORTED`** | Manifest claim is directly matched by compatible AST code evidence. | ✅ None. Implementation aligns with declaration. |
-| **`UNVERIFIED`** | Manifest claim lacks code evidence in the static AST scan. | ⚠️ Review. Claim may depend on external or runtime code. |
-| **`CONFLICT`** | Manifest declared prohibition (`CANNOT`) is contradicted by active code. | 🚨 Fix code or update declaration to resolve contradiction. |
-| **`UNDECLARED_OBSERVATION`** | Active critical capability observed in code but omitted from manifest. | 🔍 Review. Intended authority or accidental capability leak? |
-| **`UNKNOWN`** | Static evidence is ambiguous or incomplete. | ❓ Further inspection or runtime telemetry needed. |
+| **`SUPPORTED`** | Every mandatory claim dimension has sufficient compatible evidence. | ✅ Review provenance; the claim and observed evidence align. |
+| **`UNVERIFIED`** | One or more mandatory dimensions lack sufficient evidence. | ⚠️ Review. The claim may depend on external or runtime facts. |
+| **`CONFLICT`** | Bound evidence contradicts a declared dimension or prohibition. | 🚨 Fix the implementation or revise the declaration intentionally. |
+| **`UNDECLARED_OBSERVATION`** | A bound capability was observed without a covering declaration. | 🔍 Review. Intended authority or accidental capability? |
+| **`UNKNOWN`** | Evidence is ambiguous, unsupported, or incomplete. | ❓ Preserve uncertainty; investigate without guessing. |
 
 ---
 

@@ -21,7 +21,7 @@
     "ui": "tsx src/local-ui/server.ts",
     "server": "tsx src/backend/server.ts",
     "taidyup": "node bin/taidyup.js",
-    "test": "npx tsx tests/trust_kernel_adversarial_suite.test.ts && npx tsx tests/dimensional_reconciliation_binding_red.test.ts && npx tsx tests/developer_fixtures_runner.ts && npx tsx tests/scanner_evidence_hygiene.test.ts && npx tsx tests/scanner_structural_agent_red.test.ts && npx tsx tests/init_accept_hardening.test.ts && npx tsx tests/cli_target_validation.test.ts && npx tsx tests/application_contract.test.ts && npx tsx tests/local_ui_bridge.test.ts && npx tsx tests/ui_vertical.test.tsx && npx tsx tests/local_first_boundary.test.ts",
+    "test": "npx tsx tests/trust_kernel_adversarial_suite.test.ts && npx tsx tests/dimensional_reconciliation_binding_red.test.ts && npx tsx tests/developer_fixtures_runner.ts && npx tsx tests/scanner_evidence_hygiene.test.ts && npx tsx tests/scanner_structural_agent_red.test.ts && npx tsx tests/workflow_evidence_v0.test.ts && npx tsx tests/init_accept_hardening.test.ts && npx tsx tests/cli_target_validation.test.ts && npx tsx tests/application_contract.test.ts && npx tsx tests/local_ui_bridge.test.ts && npx tsx tests/ui_vertical.test.tsx && npx tsx tests/local_first_boundary.test.ts",
     "test:ui": "npx tsx tests/application_contract.test.ts && npx tsx tests/local_ui_bridge.test.ts && npx tsx tests/ui_vertical.test.tsx && npx tsx tests/local_first_boundary.test.ts"
   },
   "dependencies": {
