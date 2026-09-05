@@ -132,14 +132,14 @@ Requires Node.js 18+.
 
 ### Published npm alpha
 
-The published `taidyup@0.1.0-alpha.1` provides the original CLI commands: `init`, `scan`, `validate`, `report`, and `diff`.
+The published `taidyup@0.1.0-alpha.2` provides the current CLI commands: `init`, `scan`, `validate`, `report`, `diff`, and explicit `connected-n8n` inspection.
 
 ```bash
 npm install -g taidyup@alpha
 npx taidyup@alpha --help
 ```
 
-The published alpha predates the current repository's graphical interface, local workflow evidence, and CONNECTED n8n command. To evaluate those newer capabilities, use the current repository checkout:
+The npm-installed Alpha 2 runtime is CLI-only. To use the graphical interface and its local bridge, use the current repository checkout:
 
 ```bash
 git clone https://github.com/AnarQorp/taidyup.git

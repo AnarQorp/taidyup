@@ -71,7 +71,7 @@ export class SarifExporter {
           tool: {
             driver: {
               name: 'tAIdyup',
-              version: '0.1.0-alpha.1',
+              version: '0.1.0-alpha.2',
               informationUri: 'https://github.com/AnarQorp/taidyup',
               rules
             }

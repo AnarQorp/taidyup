@@ -33,7 +33,7 @@ export interface CliOptions {
 }
 
 export class CliCore {
-  public static VERSION = '0.1.0-alpha.1';
+  public static VERSION = '0.1.0-alpha.2';
 
   public static async execute(options: CliOptions): Promise<number> {
     try {
