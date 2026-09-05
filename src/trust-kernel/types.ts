@@ -41,6 +41,23 @@ export type DimensionAssessment = 'SATISFIED' | 'UNVERIFIED' | 'CONTRADICTED' | 
 export type ResourceRelation = 'EXACT' | 'NARROWER_THAN' | 'BROADER_THAN' | 'DISJOINT' | 'UNRESOLVED';
 export type BindingAssessment = 'UNBOUND' | 'OWNER_ASSERTED' | 'EVIDENCE_BOUND' | 'STALE' | 'AMBIGUOUS';
 
+export type SnapshotCompleteness = 'COMPLETE' | 'PARTIAL' | 'UNKNOWN_COMPLETENESS';
+export type SnapshotRetrievalStatus = 'SUCCESS' | 'ACCESS_DENIED' | 'UNAVAILABLE';
+export type EvidenceObservation = 'PRESENCE' | 'ABSENCE_OBSERVED';
+
+export interface ConfigurationIdentity {
+  sourceInstance: string;
+  scope: string;
+}
+
+/** Provider-neutral point-in-time metadata; transport details remain outside the Kernel. */
+export interface ConnectedSnapshotMetadata extends ConfigurationIdentity {
+  mode: 'POINT_IN_TIME';
+  completeness: SnapshotCompleteness;
+  retrievalStatus: SnapshotRetrievalStatus;
+  revision?: string;
+}
+
 export interface ResourceDescriptor {
   namespace: string;
   version: string;

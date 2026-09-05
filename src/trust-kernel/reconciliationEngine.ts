@@ -15,6 +15,7 @@ import {
   SubjectBindingAssertion,
   TechnicalFinding
 } from './types.js';
+import { EvidenceLayerPolicy } from './evidenceLayerPolicy.js';
 
 const STRENGTH_ORDER: EvidenceStrength[] = [
   'DEPENDENCY_ONLY', 'IMPORT_OBSERVED', 'FUNCTION_DEFINED',
@@ -138,7 +139,7 @@ function hasSufficientStrength(action: CapabilityAction | undefined, evidence: E
 }
 
 export class ReconciliationEngine {
-  public static ENGINE_VERSION = '1.1.0';
+  public static ENGINE_VERSION = '1.2.0';
 
   private static CRITICAL_ACTIONS: CapabilityAction[] = [
     'DELETE', 'EXECUTE', 'SEND', 'PUBLISH', 'APPROVE', 'PURCHASE', 'TRANSFER', 'ADMIN'
@@ -149,12 +150,12 @@ export class ReconciliationEngine {
     const reconciledClaims: Claim[] = [];
     const findings: TechnicalFinding[] = [];
     const declaredClaims = inputClaims.filter(claim => claim.source === 'DECLARATION');
-    const staticEvidences = inputEvidences.filter(evidence => evidence.sourceType === 'STATIC');
+    const reconcilableEvidences = inputEvidences.filter(evidence => evidence.sourceType === 'STATIC' || evidence.sourceType === 'CONNECTED');
     const assertions = options.subjectBindings || [];
 
     for (const declared of declaredClaims) {
       const actionCandidates = declared.action
-        ? staticEvidences.filter(evidence => evidence.data?.capability === declared.action || evidence.data?.capabilities?.includes(declared.action))
+        ? reconcilableEvidences.filter(evidence => evidence.data?.observation !== 'ABSENCE_OBSERVED' && (evidence.data?.capability === declared.action || evidence.data?.capabilities?.includes(declared.action)))
         : [];
 
       const ranked = actionCandidates.map(evidence => {
@@ -164,6 +165,13 @@ export class ReconciliationEngine {
           (resource.relation === 'EXACT' ? 2 : resource.relation === 'NARROWER_THAN' || resource.relation === 'BROADER_THAN' ? 1 : 0);
         return { evidence, subject, resource, score };
       }).sort((left, right) => right.score - left.score);
+
+      const selection = EvidenceLayerPolicy.select(declared, reconcilableEvidences, evidence => {
+        if (evidence.data?.capability !== declared.action) return false;
+        const subject = assessSubject(declared.subject, evidence, assertions);
+        const resource = assessResource(declared, evidence);
+        return subject.dimension === 'SATISFIED' && resource.relation === 'EXACT';
+      });
 
       const candidate = ranked[0];
       const evidence = candidate?.evidence;
@@ -184,14 +192,21 @@ export class ReconciliationEngine {
       const strengthSatisfied = hasSufficientStrength(declared.action, evidence, this.CRITICAL_ACTIONS);
       const anyConstraintContradicted = Object.values(constraints).includes('CONTRADICTED');
       const allConstraintsSatisfied = Object.values(constraints).every(value => value === 'SATISFIED');
-      const dimensionsSatisfied = subject.dimension === 'SATISFIED' && predicate === 'SATISFIED' &&
+      const dimensionsSatisfied = !selection.applicableAbsence && subject.dimension === 'SATISFIED' && predicate === 'SATISFIED' &&
         action === 'SATISFIED' && resource.dimension === 'SATISFIED' && allConstraintsSatisfied && strengthSatisfied;
 
       let overall: EpistemicState = 'UNVERIFIED';
       if (anyConstraintContradicted || predicate === 'CONTRADICTED') overall = 'CONFLICT';
       else if (dimensionsSatisfied) overall = 'SUPPORTED';
 
-      const diagnostics = [...subject.diagnostics, ...resource.diagnostics];
+      const diagnostics = [...subject.diagnostics, ...resource.diagnostics, ...selection.diagnostics];
+      const compatiblePositiveRefs = ranked
+        .filter(item => item.subject.dimension === 'SATISFIED' && item.resource.relation === 'EXACT')
+        .map(item => item.evidence.id);
+      const hasConnectedForClaim = selection.positive.some(item => item.sourceType === 'CONNECTED') || Boolean(selection.applicableAbsence);
+      const evidenceRefs = hasConnectedForClaim
+        ? Array.from(new Set([...compatiblePositiveRefs, ...(selection.applicableAbsence ? [selection.applicableAbsence.id] : [])]))
+        : evidence ? [evidence.id] : [];
       const assessment: ClaimMatchAssessment = {
         overall,
         subject: subject.dimension,
@@ -201,14 +216,14 @@ export class ReconciliationEngine {
         resourceRelation: resource.relation,
         constraints,
         binding: subject.binding,
-        evidenceRefs: evidence ? [evidence.id] : [],
+        evidenceRefs,
         diagnostics: Array.from(new Set(diagnostics))
       };
 
       const provenance = [...declared.provenance];
-      if (evidence) provenance.push({
-        sourceType: 'STATIC', artifact: evidence.artifact, location: evidence.provenance?.file,
-        collectorId: evidence.collectorId, evidenceId: evidence.id
+      for (const selected of reconcilableEvidences.filter(item => evidenceRefs.includes(item.id))) provenance.push({
+        sourceType: selected.sourceType, artifact: selected.artifact, location: selected.provenance?.file,
+        collectorId: selected.collectorId, evidenceId: selected.id
       });
 
       reconciledClaims.push({
@@ -251,7 +266,7 @@ export class ReconciliationEngine {
       }
     }
 
-    for (const evidence of staticEvidences) {
+    for (const evidence of reconcilableEvidences.filter(item => item.data?.observation !== 'ABSENCE_OBSERVED')) {
       const action: CapabilityAction | undefined = evidence.data?.capability;
       if (!action) continue;
       const resource = evidence.data?.resource || evidence.artifact;
@@ -266,17 +281,17 @@ export class ReconciliationEngine {
       const strong = STRENGTH_ORDER.indexOf(evidence.strength) >= STRENGTH_ORDER.indexOf('AGENT_BOUND');
       reconciledClaims.push({
         id: `${strong ? 'claim-undeclared' : 'claim-potential'}-${evidence.id}`,
-        subject: evidence.subject, predicate: 'CAN', action, resource, source: 'STATIC',
+        subject: evidence.subject, predicate: 'CAN', action, resource, source: evidence.sourceType,
         status: strong ? 'UNDECLARED_OBSERVATION' : 'OBSERVED', confidence: strong ? 0.85 : 0.3,
-        provenance: [{ sourceType: 'STATIC', artifact: evidence.artifact, location: evidence.provenance?.file, collectorId: evidence.collectorId, evidenceId: evidence.id }]
+        provenance: [{ sourceType: evidence.sourceType, artifact: evidence.artifact, location: evidence.provenance?.file, collectorId: evidence.collectorId, evidenceId: evidence.id }]
       });
 
       if (strong && this.CRITICAL_ACTIONS.includes(action)) {
         findings.push({
           id: `finding-undeclared-crit-${evidence.id}`,
           type: 'UNDECLARED_CRITICAL_CAPABILITY', severity: 'CRITICAL', title: `Undeclared Critical Capability: ${action}`,
-          description: `Static scanner observed agent-bound critical capability ${action} on resource "${resource}" without a fully bound declaration.`,
-          declaredText: `No bound declaration for ${action}`, observedText: `Observed bound capability ${action} in code`,
+          description: `${evidence.sourceType === 'CONNECTED' ? 'Connected source reported' : 'Static scanner observed'} agent-bound critical capability ${action} on resource "${resource}" without a fully bound declaration.`,
+          declaredText: `No bound declaration for ${action}`, observedText: `${evidence.sourceType === 'CONNECTED' ? 'Connected current-state' : 'Observed code'} evidence reports bound capability ${action}`,
           evidenceRefs: [evidence.id], provenance: { file: evidence.provenance?.file || evidence.artifact }
         });
       }
