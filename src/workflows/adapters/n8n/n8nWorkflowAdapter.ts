@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { CapabilityAction, Claim, Evidence, ResourceDescriptor } from '../../../trust-kernel/types.js';
+import { CapabilityAction, Claim, ConnectedSnapshotMetadata, Evidence, ResourceDescriptor, SourceType } from '../../../trust-kernel/types.js';
 import { CredentialReference, ParameterFact, WorkflowArtifact, WorkflowComponent, WorkflowEdge, WorkflowRelation } from '../../model/workflowIr.js';
 
 export class WorkflowAdapterError extends Error {
@@ -7,6 +7,13 @@ export class WorkflowAdapterError extends Error {
 }
 
 export interface WorkflowAdapterOutput { artifact: WorkflowArtifact; claims: Claim[]; evidences: Evidence[]; diagnostics: string[]; }
+export interface WorkflowAdapterOptions {
+  sourceType?: Extract<SourceType, 'STATIC' | 'CONNECTED'>;
+  evidenceLayer?: 'OBSERVED' | 'CONNECTED';
+  observedAt?: string;
+  connectedSnapshot?: ConnectedSnapshotMetadata;
+  sanitizeDisplayNames?: boolean;
+}
 type N8nNode = { id: string; name: string; type: string; typeVersion: number; disabled?: boolean; parameters: Record<string, unknown>; credentials?: Record<string, { id?: string; name?: string }> };
 type Mapping = { action: CapabilityAction; resourceType: string; scope: string; rule: string };
 const VERSION = '0.1.0';
@@ -61,12 +68,16 @@ function relation(channel: string): WorkflowRelation {
 export class N8nWorkflowAdapter {
   static readonly MAX_ARTIFACT_BYTES = 5 * 1024 * 1024;
 
-  static adapt(raw: Buffer, sourcePath: string): WorkflowAdapterOutput {
+  static adapt(raw: Buffer, sourcePath: string, options: WorkflowAdapterOptions = {}): WorkflowAdapterOutput {
     if (raw.byteLength > this.MAX_ARTIFACT_BYTES) throw new WorkflowAdapterError(`Workflow artifact exceeds ${this.MAX_ARTIFACT_BYTES} byte size limit.`);
     let parsed: any;
     try { parsed = JSON.parse(raw.toString('utf8')); } catch { throw new WorkflowAdapterError('Malformed workflow JSON.'); }
     if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.nodes) || !parsed.connections || typeof parsed.connections !== 'object' || typeof parsed.name !== 'string') throw new WorkflowAdapterError('JSON is not a supported n8n workflow artifact.');
     const artifactHash = hash(raw);
+    const sourceType = options.sourceType ?? 'STATIC';
+    const evidenceLayer = options.evidenceLayer ?? (sourceType === 'CONNECTED' ? 'CONNECTED' : 'OBSERVED');
+    const observedAt = options.observedAt ?? new Date().toISOString();
+    if (sourceType === 'CONNECTED' && !options.connectedSnapshot) throw new WorkflowAdapterError('CONNECTED adaptation requires point-in-time snapshot metadata.');
     const workflowId = typeof parsed.id === 'string' ? parsed.id : undefined;
     const nodes = parsed.nodes.filter((item: any) => item && typeof item.id === 'string' && typeof item.name === 'string' && typeof item.type === 'string' && typeof item.typeVersion === 'number' && item.parameters && typeof item.parameters === 'object') as N8nNode[];
     if (nodes.length !== parsed.nodes.length) throw new WorkflowAdapterError('Workflow contains an unsupported node structure.');
@@ -81,7 +92,7 @@ export class N8nWorkflowAdapter {
         credentialReferences.push({ componentLocalId: node.id, type, referenceHash, status: 'REFERENCE_OBSERVED' });
         return referenceHash;
       });
-      return { locator: locator(node), displayName: node.name, kind: kind(node), providerType: node.type, providerTypeVersion: node.typeVersion, configuredOperation: typeof node.parameters.operation === 'string' && !expression(node.parameters.operation) ? node.parameters.operation : undefined, configuredResource: typeof node.parameters.resource === 'string' && !expression(node.parameters.resource) ? node.parameters.resource : undefined, enabledState: node.disabled === true ? 'DISABLED' : 'ENABLED_IN_EXPORT', parameterFacts: facts, dynamicFields: dynamic, credentialRefs: refs } satisfies WorkflowComponent;
+      return { locator: locator(node), displayName: options.sanitizeDisplayNames ? `node-${hash(node.name).slice(0, 12)}` : node.name, kind: kind(node), providerType: node.type, providerTypeVersion: node.typeVersion, configuredOperation: typeof node.parameters.operation === 'string' && !expression(node.parameters.operation) ? node.parameters.operation : undefined, configuredResource: typeof node.parameters.resource === 'string' && !expression(node.parameters.resource) ? node.parameters.resource : undefined, enabledState: node.disabled === true ? 'DISABLED' : 'ENABLED_IN_EXPORT', parameterFacts: facts, dynamicFields: dynamic, credentialRefs: refs } satisfies WorkflowComponent;
     });
     const edges: WorkflowEdge[] = [];
     for (const [sourceName, channels] of Object.entries(parsed.connections as Record<string, any>)) for (const [channel, outputs] of Object.entries(channels as Record<string, any>)) (outputs as any[]).forEach((group, sourceIndex) => (group ?? []).forEach((connection: any) => {
@@ -90,19 +101,20 @@ export class N8nWorkflowAdapter {
       edges.push({ from: locator(from), to: locator(to), relation: relation(channel), providerChannel: channel, sourceIndex, targetIndex: connection.index });
       if (channel === 'ai_tool' && kind(from) === 'SUBWORKFLOW') edges.push({ from: locator(to), to: locator(from), relation: 'INVOKES_SUBWORKFLOW', providerChannel: channel, sourceIndex, targetIndex: connection.index });
     }));
-    const artifact: WorkflowArtifact = { provider: 'n8n', artifactHash, workflowLocator: { provider: 'n8n', localId: workflowId, artifactHash }, displayName: parsed.name, observedState: parsed.active === true ? 'EXPORTED_ACTIVE_TRUE' : parsed.active === false ? 'EXPORTED_ACTIVE_FALSE' : 'EXPORTED_ACTIVE_ABSENT', components, edges, credentialReferences, sanitizedMetadata: { pinDataPresent: parsed.pinData != null && Object.keys(parsed.pinData).length > 0, sourcePath } };
+    const artifact: WorkflowArtifact = { provider: 'n8n', artifactHash, workflowLocator: { provider: 'n8n', localId: workflowId, artifactHash }, displayName: options.sanitizeDisplayNames ? `workflow-${hash(parsed.name).slice(0, 12)}` : parsed.name, observedState: sourceType === 'CONNECTED' ? (parsed.active === true ? 'CURRENT_ACTIVE_TRUE' : parsed.active === false ? 'CURRENT_ACTIVE_FALSE' : 'CURRENT_ACTIVE_UNKNOWN') : (parsed.active === true ? 'EXPORTED_ACTIVE_TRUE' : parsed.active === false ? 'EXPORTED_ACTIVE_FALSE' : 'EXPORTED_ACTIVE_ABSENT'), components, edges, credentialReferences, sanitizedMetadata: { pinDataPresent: parsed.pinData != null && Object.keys(parsed.pinData).length > 0, sourcePath } };
     const claims: Claim[] = []; const diagnostics: string[] = [];
     const artifactData = {
-      evidenceLayer: 'OBSERVED',
+      evidenceLayer,
       provider: 'n8n',
       artifactHash,
-      workflow: { id: workflowId, name: parsed.name, exportedState: artifact.observedState },
+      workflow: { id: workflowId, name: artifact.displayName, configuredState: artifact.observedState },
       components: components.map(component => ({ locator: component.locator, kind: component.kind, providerType: component.providerType, providerTypeVersion: component.providerTypeVersion, enabledState: component.enabledState, configuredOperation: component.configuredOperation, configuredResource: component.configuredResource, dynamicFields: component.dynamicFields })),
       edges: edges.map(edge => ({ from: edge.from, to: edge.to, relation: edge.relation, providerChannel: edge.providerChannel })),
       credentialReferences,
       pinData: artifact.sanitizedMetadata.pinDataPresent ? 'PRESENT_REDACTED_NOT_EXECUTION_EVIDENCE' : 'ABSENT'
     };
-    const evidences: Evidence[] = [{ id: `ev-workflow-artifact-${artifactHash.slice(0, 16)}`, type: 'WORKFLOW_ARTIFACT_OBSERVATION', sourceType: 'STATIC', subject: `workflow:n8n:${workflowId ?? artifactHash.slice(0, 12)}`, observedAt: new Date().toISOString(), collectorId: 'taidyup-n8n-workflow-adapter', collectorVersion: VERSION, artifact: sourcePath, data: artifactData, strength: 'DEPENDENCY_ONLY', sha256: hash(JSON.stringify(artifactData)), provenance: { file: sourcePath } }];
+    if (options.connectedSnapshot) Object.assign(artifactData, { connectedSnapshot: options.connectedSnapshot });
+    const evidences: Evidence[] = [{ id: `ev-workflow-artifact-${artifactHash.slice(0, 16)}`, type: sourceType === 'CONNECTED' ? 'CONNECTED_WORKFLOW_SNAPSHOT' : 'WORKFLOW_ARTIFACT_OBSERVATION', sourceType, subject: `workflow:n8n:${workflowId ?? artifactHash.slice(0, 12)}`, observedAt, collectorId: 'taidyup-n8n-workflow-adapter', collectorVersion: VERSION, artifact: sourcePath, data: artifactData, strength: 'DEPENDENCY_ONLY', sha256: hash(JSON.stringify(artifactData)), provenance: { file: sourcePath } }];
     for (const edge of edges.filter(e => e.relation === 'TOOL_OF')) {
       const tool = nodes.find(n => n.id === edge.from.localId); const target = nodes.find(n => n.id === edge.to.localId);
       if (!tool || !target || kind(target) !== 'AGENT') continue;
@@ -112,9 +124,9 @@ export class N8nWorkflowAdapter {
       const subject = `agent:n8n:${workflowId ?? artifactHash.slice(0, 12)}:${target.id}`;
       const resourceDescriptor: ResourceDescriptor = { namespace: 'workflow', version: '0', type: mapping.resourceType, scope: mapping.scope, artifact: tool.type };
       const evId = `ev-workflow-${artifactHash.slice(0, 12)}-${tool.id}-${mapping.action}`;
-      const data = { capability: mapping.action, resource: `${mapping.resourceType}:${mapping.scope}`, resourceDescriptor, capabilityPathBound: true, evidenceLayer: 'OBSERVED', componentLocator: { scheme: 'workflow', version: '0', revision: artifactHash, language: 'workflow', module: workflowId ?? 'export', qualifiedSymbol: tool.id, structuralFingerprint: hash(`${tool.type}@${tool.typeVersion}`) }, workflowProvenance: { provider: 'n8n', workflow: { id: workflowId, name: parsed.name }, component: { id: tool.id, type: tool.type, typeVersion: tool.typeVersion, operation: tool.parameters.operation }, graph: { fromNodeId: tool.id, toNodeId: target.id, relation: 'TOOL_OF', providerChannel: 'ai_tool' }, mappingRule: `${mapping.rule}@${VERSION}`, parameterFacts: components.find(c => c.locator.localId === tool.id)?.parameterFacts } };
-      evidences.push({ id: evId, type: 'WORKFLOW_CAPABILITY_OBSERVATION', sourceType: 'STATIC', subject, observedAt: new Date().toISOString(), collectorId: 'taidyup-n8n-workflow-adapter', collectorVersion: VERSION, artifact: sourcePath, location: `nodes[id=${tool.id}]`, data, strength: 'AGENT_BOUND', sha256: hash(JSON.stringify(data)), provenance: { file: sourcePath } });
-      claims.push({ id: `claim-${evId}`, subject, predicate: 'CAN', action: mapping.action, resource: data.resource, resourceDescriptor, source: 'STATIC', status: 'INFERRED', provenance: [{ sourceType: 'STATIC', artifact: sourcePath, location: `nodes[id=${tool.id}]`, snippet: `${tool.name} --ai_tool--> ${target.name}`, collectorId: 'taidyup-n8n-workflow-adapter', evidenceId: evId }] });
+      const data = { capability: mapping.action, resource: `${mapping.resourceType}:${mapping.scope}`, resourceDescriptor, capabilityPathBound: true, evidenceLayer, ...(options.connectedSnapshot ? { connectedSnapshot: options.connectedSnapshot } : {}), componentLocator: { scheme: 'workflow', version: '0', revision: artifactHash, language: 'workflow', module: workflowId ?? 'export', qualifiedSymbol: tool.id, structuralFingerprint: hash(`${tool.type}@${tool.typeVersion}`) }, workflowProvenance: { provider: 'n8n', workflow: { id: workflowId, name: artifact.displayName }, component: { id: tool.id, type: tool.type, typeVersion: tool.typeVersion, operation: tool.parameters.operation }, graph: { fromNodeId: tool.id, toNodeId: target.id, relation: 'TOOL_OF', providerChannel: 'ai_tool' }, mappingRule: `${mapping.rule}@${VERSION}`, parameterFacts: components.find(c => c.locator.localId === tool.id)?.parameterFacts } };
+      evidences.push({ id: evId, type: sourceType === 'CONNECTED' ? 'CONNECTED_WORKFLOW_CAPABILITY' : 'WORKFLOW_CAPABILITY_OBSERVATION', sourceType, subject, observedAt, collectorId: 'taidyup-n8n-workflow-adapter', collectorVersion: VERSION, artifact: sourcePath, location: `nodes[id=${tool.id}]`, data, strength: 'AGENT_BOUND', sha256: hash(JSON.stringify(data)), provenance: { file: sourcePath } });
+      claims.push({ id: `claim-${evId}`, subject, predicate: 'CAN', action: mapping.action, resource: data.resource, resourceDescriptor, source: sourceType, status: 'INFERRED', provenance: [{ sourceType, artifact: sourcePath, location: `nodes[id=${tool.id}]`, snippet: options.sanitizeDisplayNames ? `${tool.id} --ai_tool--> ${target.id}` : `${tool.name} --ai_tool--> ${target.name}`, collectorId: 'taidyup-n8n-workflow-adapter', evidenceId: evId }] });
     }
     return { artifact, claims, evidences, diagnostics };
   }

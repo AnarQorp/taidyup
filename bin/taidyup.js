@@ -14,6 +14,14 @@ async function main() {
   let outputDir;
   let baseFile;
   let targetFile;
+  let baseUrl;
+  let workflowId;
+  let tokenEnv;
+  let authorityMode;
+  let connectionId;
+  let observedArtifact;
+  let manifestFile;
+  let allowLoopbackHttp = false;
 
   if (command === 'diff') {
     baseFile = args[1];
@@ -26,6 +34,14 @@ async function main() {
       else if (arg === '--accept' || arg === '-y' || arg === '-yes') accept = true;
       else if (arg === '--output' || arg === '-o') outputFile = args[++i];
       else if (arg === '--output-dir') outputDir = args[++i];
+      else if (arg === '--base-url') baseUrl = args[++i];
+      else if (arg === '--workflow') workflowId = args[++i];
+      else if (arg === '--token-env') tokenEnv = args[++i];
+      else if (arg === '--authority-mode') authorityMode = args[++i];
+      else if (arg === '--connection-id') connectionId = args[++i];
+      else if (arg === '--observed-artifact') observedArtifact = args[++i];
+      else if (arg === '--manifest') manifestFile = args[++i];
+      else if (arg === '--allow-loopback-http') allowLoopbackHttp = true;
       else if (!arg.startsWith('-')) {
         targetPath = arg;
       }
@@ -41,7 +57,15 @@ async function main() {
     outputFile,
     outputDir,
     baseFile,
-    targetFile
+    targetFile,
+    baseUrl,
+    workflowId,
+    tokenEnv,
+    authorityMode,
+    connectionId,
+    observedArtifact,
+    manifestFile,
+    allowLoopbackHttp
   });
 
   process.exit(exitCode);

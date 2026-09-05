@@ -10,6 +10,7 @@ import {
   ProjectAnalysisError,
   validateLocalProjectTarget
 } from '../application/analyzeLocalProject.js';
+import { analyzeConnectedN8nWorkflow } from '../application/analyzeConnectedN8nWorkflow.js';
 
 export interface CliOptions {
   command: string;
@@ -21,6 +22,14 @@ export interface CliOptions {
   outputDir?: string;
   baseFile?: string;
   targetFile?: string;
+  baseUrl?: string;
+  workflowId?: string;
+  tokenEnv?: string;
+  authorityMode?: 'TECHNICALLY_READ_ONLY' | 'CLIENT_ENFORCED_READ_ONLY' | 'UNKNOWN';
+  connectionId?: string;
+  observedArtifact?: string;
+  manifestFile?: string;
+  allowLoopbackHttp?: boolean;
 }
 
 export class CliCore {
@@ -56,6 +65,8 @@ export class CliCore {
           return await this.handleReport(options);
         case 'diff':
           return await this.handleDiff(options);
+        case 'connected-n8n':
+          return await this.handleConnectedN8n(options);
         case 'version':
           console.log(`taidyup v${this.VERSION}`);
           return 0;
@@ -295,6 +306,37 @@ export class CliCore {
     return 0;
   }
 
+  private static async handleConnectedN8n(options: CliOptions): Promise<number> {
+    if (!options.baseUrl || !options.workflowId) {
+      console.error('❌ Usage: taidyup connected-n8n --base-url <url> --workflow <id> [--token-env N8N_API_KEY]');
+      return 2;
+    }
+    const tokenEnv = options.tokenEnv || 'N8N_API_KEY';
+    const token = process.env[tokenEnv];
+    if (!token) { console.error(`❌ Required token environment variable ${tokenEnv} is not set.`); return 2; }
+    const authorityMode = options.authorityMode || 'UNKNOWN';
+    if (!['TECHNICALLY_READ_ONLY', 'CLIENT_ENFORCED_READ_ONLY', 'UNKNOWN'].includes(authorityMode)) {
+      console.error('❌ Invalid authority mode.'); return 2;
+    }
+    const endpoint = new URL(options.baseUrl);
+    const disclosedAuthority = authorityMode === 'CLIENT_ENFORCED_READ_ONLY' ? authorityMode : 'UNKNOWN';
+    console.log(`🌐 CONNECTED opt-in: provider=n8n host=${endpoint.origin} requests=workflow:list,workflow:read methods=GET authorityMode=${disclosedAuthority} declaredAuthorityMode=${authorityMode} execution=false`);
+    let declaredClaims: any[] = []; let declarationEvidence: any[] = [];
+    if (options.manifestFile) {
+      const parsed = ManifestParser.parseManifest(JSON.parse(fs.readFileSync(path.resolve(options.manifestFile), 'utf8')), options.manifestFile);
+      if (!parsed.isValid) { console.error(`❌ Invalid owner-reviewed manifest: ${parsed.errors.join('; ')}`); return 2; }
+      declaredClaims = parsed.claims; declarationEvidence = parsed.evidences;
+    }
+    const result = await analyzeConnectedN8nWorkflow({
+      config: { provider: 'n8n', baseUrl: options.baseUrl, token, connectionId: options.connectionId || endpoint.host, authorityMode, allowLoopbackHttp: options.allowLoopbackHttp },
+      workflowId: options.workflowId, observedArtifactPath: options.observedArtifact ? path.resolve(options.observedArtifact) : undefined,
+      declaredClaims, declarationEvidence
+    });
+    const output = { disclosure: result.disclosure, snapshot: result.snapshot, diagnostics: result.diagnostics, absenceCount: result.absenceEvidences.length, reconciliation: result.reconciliation };
+    console.log(JSON.stringify(output, null, 2));
+    return 0;
+  }
+
   private static printHelp(): void {
     console.log(`
 tAIdyup CLI v${this.VERSION}
@@ -309,6 +351,7 @@ COMMANDS:
   validate  [targetDir]        Reconcile taidyup.json against local code scan
   report    [targetDir]        Export JSON report, TECHNICAL_PASSPORT.md & taidyup.sarif
   diff      <base> <target>    Compute semantic authority diff between two reports
+  connected-n8n                Explicitly inspect current n8n workflow configuration
 
 OPTIONS:
   --accept, -y                 Validate and accept owner-reviewed agents[] from the existing draft
@@ -316,6 +359,14 @@ OPTIONS:
   --json                       Output raw JSON for scan
   --output, -o <file>          Save scan output to file
   --output-dir <dir>           Directory to save generated report artifacts
+  --base-url <url>             Explicit n8n instance URL (CONNECTED only)
+  --workflow <id>              Exact n8n workflow ID (CONNECTED only)
+  --token-env <name>           Environment variable containing API key (default N8N_API_KEY)
+  --authority-mode <mode>      TECHNICALLY_READ_ONLY, CLIENT_ENFORCED_READ_ONLY, or UNKNOWN
+  --connection-id <id>         Local identity for the configured connection
+  --observed-artifact <file>   Explicit local artifact to compare with current configuration
+  --manifest <file>            Owner-reviewed declaration manifest for reconciliation
+  --allow-loopback-http        Permit explicit HTTP only on loopback for disposable/local n8n
   --version, -v                Print CLI version
   --help, -h                   Print help menu
 `);

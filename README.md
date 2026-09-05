@@ -156,11 +156,25 @@ And neither one, by itself, is a legal conclusion.
 
 tAIdyup can also normalize a deliberately small, versioned subset of local n8n workflow JSON into provider-neutral evidence. It recognizes explicit AI Agent `ai_tool` relationships and conservative mappings for email send, database read/write, command execution, Code tools, and literal HTTP GET.
 
-This support is local artifact analysis only. It does not connect to n8n, access credentials, execute workflows, inspect execution history, or monitor deployments. A configured edge is not proof that a tool was available at runtime or invoked. Credential references are not proof that credentials exist, are valid, active, or have particular scopes. Expressions remain unresolved; disabled tools do not emit available agent-bound capability evidence; subworkflow authority is not flattened without the child artifact.
+Local artifact analysis remains the default and makes no network requests. CONNECTED V0 can additionally inspect one explicitly selected workflow from an explicitly configured n8n instance and compare its current configuration with local evidence. It is opt-in through `taidyup connected-n8n`; analysis, evidence handling, and reconciliation remain local, with no tAIdyup cloud or telemetry dependency.
+
+CONNECTED V0 uses only workflow-list and exact-workflow GET requests, reads its API key from a named environment variable, rejects redirects and mutating methods, and does not call credential or execution endpoints. It reports a credential as technically read-only only when that property can be provider-verified; otherwise it records client-enforced or unknown authority. Current configuration is not execution, downstream reachability, authorization, safety, or compliance. Credential references are not proof that credentials exist, are valid, active, or have particular scopes. Expressions remain unresolved; disabled tools do not emit enabled agent-bound capability evidence; subworkflow authority is not flattened.
+
+```bash
+N8N_API_KEY='...' taidyup connected-n8n \
+  --base-url https://your-n8n.example \
+  --workflow WORKFLOW_ID \
+  --connection-id my-n8n \
+  --authority-mode UNKNOWN \
+  --observed-artifact ./workflow.json \
+  --manifest ./taidyup.json
+```
+
+Before connecting, the CLI discloses the provider, host, GET endpoint classes, authority mode, and that execution is disabled. HTTPS is mandatory except for an explicit loopback-development opt-in. CONNECTED snapshots are point-in-time; a complete comparable snapshot can surface configured-authority drift, while 401/403/timeouts/errors/partial pagination never establish absence.
 
 The adapter hashes the raw workflow artifact, excludes pinned payloads, hashes credential references and parameter values, and carries the exact node and graph path into provenance. Unsupported nodes and versions remain unmapped rather than guessed. The same Trust Kernel then reconciles these observations against owner-reviewed declarations—workflow observations never create declarations or authorization.
 
-The V0 application entrypoint is `analyzeLocalN8nWorkflow()` in `src/application/analyzeLocalWorkflowArtifact.ts`. The normal developer flow remains `taidyup init`, owner review, `taidyup init --accept`, and `taidyup validate .`; dedicated workflow CLI discovery is not advertised in this Alpha.
+The local entrypoint is `analyzeLocalN8nWorkflow()`; the explicit network entrypoint is `analyzeConnectedN8nWorkflow()`. The normal developer flow remains `taidyup init`, owner review, `taidyup init --accept`, and `taidyup validate .` with zero CONNECTED network activity.
 
 **Align what you declare with what you build.**
 

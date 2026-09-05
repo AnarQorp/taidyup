@@ -35,7 +35,7 @@ export interface WorkflowArtifact {
   artifactHash: string;
   workflowLocator: WorkflowLocator;
   displayName: string;
-  observedState: 'EXPORTED_ACTIVE_TRUE' | 'EXPORTED_ACTIVE_FALSE' | 'EXPORTED_ACTIVE_ABSENT';
+  observedState: 'EXPORTED_ACTIVE_TRUE' | 'EXPORTED_ACTIVE_FALSE' | 'EXPORTED_ACTIVE_ABSENT' | 'CURRENT_ACTIVE_TRUE' | 'CURRENT_ACTIVE_FALSE' | 'CURRENT_ACTIVE_UNKNOWN';
   components: WorkflowComponent[];
   edges: WorkflowEdge[];
   credentialReferences: CredentialReference[];
