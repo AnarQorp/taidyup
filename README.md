@@ -11,454 +11,319 @@
 [![npm alpha](https://img.shields.io/npm/v/taidyup/alpha?color=2563eb&label=npm%20alpha)](https://www.npmjs.com/package/taidyup)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![node](https://img.shields.io/badge/node-%3E%3D18-green.svg)](package.json)
-[![privacy](https://img.shields.io/badge/privacy-100%25%20local--first-emerald.svg)](#privacy--local-first-guarantee)
-[![build](https://img.shields.io/badge/tests-100%25%20passing-brightgreen.svg)](#alpha-1-verification)
 
-```bash
-npm install -g taidyup@alpha
-```
+**Align what you declare with what you build.**
 
 </div>
 
 ---
 
-## Your AI changes every time your code does.
+## What authority does your AI appear to have — and what evidence supports that?
 
-You add a tool.
+An AI system can span source code, agents, tools, workflows, models, memory, MCP servers, and external configuration. Its apparent authority can change while the project still looks like the same application.
 
-Connect an MCP server.
+tAIdyup helps you explore that system as an evidence-backed map:
 
-Introduce filesystem access.
+- which subject or agent is involved;
+- which capability is declared or observed;
+- which resource and constraints apply;
+- why a reconciliation result was reached;
+- which evidence and provenance support it;
+- what changed, and what remains unknown.
 
-Change a framework.
+It does not turn configuration into certainty. It preserves the distance between intent, technical evidence, current connected state, and future runtime facts.
 
-Give an agent access to a database.
+## See your AI, not just another report
 
-Add process execution.
+tAIdyup has two developer surfaces:
 
-Update a dependency.
+- **Graphical interface:** explore a local project's subjects, claims, five reconciliation states, dimensional assessments, diagnostics, evidence, provenance, and the answer to **Why?**
+- **CLI and machine-readable outputs:** analyze, validate, automate, generate evidence artifacts, compare reports, and explicitly inspect supported current n8n configuration.
 
-The project still looks like the same AI application.
+For local source analysis, both surfaces use the same application path, ScannerAdapter, Trust Kernel, and `ReconciledTrustState`. The current graphical interface is intentionally narrower: it visualizes local declaration and static evidence, but does not yet ingest CONNECTED snapshots, report diff, SARIF, or the Technical Passport.
 
-But its **authority may have changed**.
+Run the current repository UI:
 
-And when somebody eventually asks:
+```bash
+npm install
+npm run build
+npm run ui
+```
 
-> What can this AI actually do?
-> Where does that capability come from?
-> Was it intentional?
-> When was it introduced?
-> Does the implementation match what we say it does?
-> Can you prove it?
+Then open `http://127.0.0.1:3001` and enter the absolute path of an existing local project containing `taidyup.json`.
 
-...the worst time to start looking for those answers is after the system has already been built.
+<!-- SCREENSHOT_RECOMMENDED_AFTER_UI_POLISH: add a redacted, path-neutral capture of the real local UI when a reproducible public demo fixture is available. -->
 
-**tAIdyup makes those questions part of development.**
+The loopback bridge binds to `127.0.0.1`, accepts a local project path, and returns the Core's typed local analysis. It does not parse CLI text or recreate reconciliation logic in the browser.
 
-## Try it in 60 seconds
+## Check apparent authority dimension by dimension
+
+A declaration is more than an action name. tAIdyup assesses the subject, predicate, action, resource, and declared constraints against relevant evidence.
+
+Conceptual example:
+
+| Claim or observation | Result | Why |
+| --- | --- | --- |
+| Declared `READ` repository | `SUPPORTED` | Every mandatory dimension has sufficient compatible evidence. |
+| Declared `WRITE` files | `UNVERIFIED` | The available evidence does not establish every required binding, resource, or constraint dimension. |
+| Declared `CANNOT EXECUTE` shell | `CONFLICT` | Bound evidence explicitly contradicts the prohibition. |
+| Observed agent-bound `EXECUTE` shell | `UNDECLARED_OBSERVATION` | Consequential configured authority was observed without a covering declaration. |
+
+This table illustrates the model; it is not a claim about a particular project.
+
+`SUPPORTED` means the mandatory declaration dimensions are supported by compatible evidence. It does **not** mean verified identity, execution, authorization, safety, or compliance.
+
+## Not everything found is proven
+
+```text
+DECLARED                 owner-reviewed intent
+    +
+OBSERVED                 local source code and supported workflow artifacts
+    +
+CONNECTED                explicit point-in-time current configuration
+    +
+RUNTIME                  future; not implemented
+    ↓
+Trust Kernel
+    ↓
+ReconciledTrustState
+```
+
+The boundaries matter:
+
+- `DECLARED != VERIFIED`
+- `OBSERVED != AUTHORIZED`
+- `CONNECTED != AUTHORIZED`
+- `IMPLEMENTED != ENABLED`
+- `ENABLED != EXECUTED`
+- `EXECUTED != AUTHORIZED`
+- `AUTHORIZED != COMPLIANT`
+- `SAME_WORKFLOW != AGENT_AUTHORITY`
+- `STATIC_CONFIGURATION != RUNTIME_RESOURCE`
+- `CONNECTED_AT_T != CURRENT_FOREVER`
+
+tAIdyup requires evidence for subject, capability, and resource relationships. Similar names or coexistence in a repository or workflow are not treated as identity or authority bindings.
+
+## See configured-authority drift
+
+The current CONNECTED V0 has been validated against a disposable n8n 2.37.10 instance and a synthetic workflow. At T1, an identified workflow revision reported an explicit AI Agent → Gmail tool relationship that mapped to configured `SEND`. An owner-reviewed declaration, local artifact evidence, and the CONNECTED snapshot reconciled as `SUPPORTED`.
+
+After the Gmail tool was removed outside the collector, a later complete and comparable snapshot produced:
+
+```text
+UNVERIFIED
+CURRENT_STATE_DRIFT
+CONNECTED_ABSENCE_OBSERVED
+```
+
+The earlier evidence remained in provenance. This established point-in-time **configured-authority drift**. It did not establish that email was executed, that a credential was valid, that the action was authorized, or that the system was compliant. tAIdyup does not continuously monitor n8n.
+
+Report diff is a separate operation: `taidyup diff` compares two saved `ReconciledTrustState` reports. CONNECTED drift compares sufficiently identified, scoped, complete, and time-stamped evidence; silence in a failed or partial retrieval is never treated as absence.
+
+## Try it
 
 Requires Node.js 18+.
 
+### Published npm alpha
+
+The published `taidyup@0.1.0-alpha.1` provides the original CLI commands: `init`, `scan`, `validate`, `report`, and `diff`.
+
 ```bash
 npm install -g taidyup@alpha
-cd your-ai-project
-taidyup init
-# Review taidyup.json.draft and explicitly complete agents[] first.
-taidyup init --accept
-taidyup validate .
+npx taidyup@alpha --help
 ```
 
-This runs locally, proposes non-declarative candidate suggestions, accepts only the owner-reviewed declaration in `agents[]`, then prints the reconciliation summary: supported, unverified, conflicting, undeclared, and unknown capabilities.
-
-`--accept` does not promote scanner suggestions. It validates an existing `taidyup.json.draft` whose `agents[]` the owner has explicitly reviewed and completed, then writes only that canonical declaration. tAIdyup is an Early Alpha; its static analysis can miss capabilities or report false positives, and its output is not a certification or legal compliance assessment.
-
-```text
-        BUILD
-          │
-          ▼
-       tAIdyup
-          │
-    ┌─────┼─────┐
-    ▼     ▼     ▼
- UNDERSTAND  CHECK  EVIDENCE
-    │     │     │
-    └─────┼─────┘
-          ▼
-        BUILD
-          │
-          ▼
-       tAIdyup
-          │
-          ▼
-        SHIP
-```
-
-Run it while you build.
-
-Run it when authority changes.
-
-Run it before a release.
-
-And when a client, auditor or regulatory process asks for evidence, you don't have to reconstruct the story of your AI from scratch.
-
-**You've been building that evidence along the way.**
-
----
-
-# What does tAIdyup do?
-
-tAIdyup maintains a distinction between two things that are often treated as if they were the same:
-
-### What you intended your AI to be able to do
-
-and
-
-### What local source code and supported workflow artifacts provide evidence that it is configured to do
-
-It then reconciles the two.
-
-```text
-        DECLARED
-        AUTHORITY
-            │
-            ▼
-     ┌──────────────┐
-     │              │
-     │   tAIdyup    │
-     │ Trust Kernel │
-     │              │
-     └──────────────┘
-            ▲
-            │
-        OBSERVED
-     IMPLEMENTATION
-```
-
-The result is not simply PASS or FAIL.
-
-tAIdyup preserves what it actually knows.
-
-```text
-SUPPORTED
-UNVERIFIED
-CONFLICT
-UNDECLARED_OBSERVATION
-UNKNOWN
-```
-
-Because a declaration is not evidence.
-
-An observation is not certainty.
-
-And neither one, by itself, is a legal conclusion.
-
-## Local workflow evidence (V0)
-
-tAIdyup can also normalize a deliberately small, versioned subset of local n8n workflow JSON into provider-neutral evidence. It recognizes explicit AI Agent `ai_tool` relationships and conservative mappings for email send, database read/write, command execution, Code tools, and literal HTTP GET.
-
-Local artifact analysis remains the default and makes no network requests. CONNECTED V0 can additionally inspect one explicitly selected workflow from an explicitly configured n8n instance and compare its current configuration with local evidence. It is opt-in through `taidyup connected-n8n`; analysis, evidence handling, and reconciliation remain local, with no tAIdyup cloud or telemetry dependency.
-
-CONNECTED V0 uses only workflow-list and exact-workflow GET requests, reads its API key from a named environment variable, rejects redirects and mutating methods, and does not call credential or execution endpoints. It reports a credential as technically read-only only when that property can be provider-verified; otherwise it records client-enforced or unknown authority. Current configuration is not execution, downstream reachability, authorization, safety, or compliance. Credential references are not proof that credentials exist, are valid, active, or have particular scopes. Expressions remain unresolved; disabled tools do not emit enabled agent-bound capability evidence; subworkflow authority is not flattened.
+The published alpha predates the current repository's graphical interface, local workflow evidence, and CONNECTED n8n command. To evaluate those newer capabilities, use the current repository checkout:
 
 ```bash
-N8N_API_KEY='...' taidyup connected-n8n \
+git clone https://github.com/AnarQorp/taidyup.git
+cd taidyup
+npm install
+npm run build
+node bin/taidyup.js --help
+```
+
+### Local declaration and source analysis
+
+```bash
+cd your-ai-project
+
+taidyup init
+# Review taidyup.json.draft and explicitly complete agents[].
+taidyup init --accept
+
+taidyup scan .
+taidyup validate .
+taidyup report .
+taidyup diff previous-report.json current-report.json
+```
+
+`init` creates a non-declarative review draft. `init --accept` validates owner-reviewed `agents[]`; scanner suggestions are never promoted into declarations automatically.
+
+## Explicit CONNECTED n8n inspection
+
+The current repository provides an opt-in `connected-n8n` command for one explicitly selected workflow:
+
+```bash
+export N8N_API_KEY='your-api-key'
+
+node bin/taidyup.js connected-n8n \
   --base-url https://your-n8n.example \
   --workflow WORKFLOW_ID \
   --connection-id my-n8n \
+  --token-env N8N_API_KEY \
   --authority-mode UNKNOWN \
   --observed-artifact ./workflow.json \
   --manifest ./taidyup.json
 ```
 
-Before connecting, the CLI discloses the provider, host, GET endpoint classes, authority mode, and that execution is disabled. HTTPS is mandatory except for an explicit loopback-development opt-in. CONNECTED snapshots are point-in-time; a complete comparable snapshot can surface configured-authority drift, while 401/403/timeouts/errors/partial pagination never establish absence.
+Before retrieval, the CLI discloses the provider, target origin, GET endpoint classes, reported authority mode, and `execution=false`.
 
-The adapter hashes the raw workflow artifact, excludes pinned payloads, hashes credential references and parameter values, and carries the exact node and graph path into provenance. Unsupported nodes and versions remain unmapped rather than guessed. The same Trust Kernel then reconciles these observations against owner-reviewed declarations—workflow observations never create declarations or authorization.
+CONNECTED V0:
 
-The local entrypoint is `analyzeLocalN8nWorkflow()`; the explicit network entrypoint is `analyzeConnectedN8nWorkflow()`. The normal developer flow remains `taidyup init`, owner review, `taidyup init --accept`, and `taidyup validate .` with zero CONNECTED network activity.
+- is disabled unless this explicit command is used;
+- connects directly from the developer's machine—there is no tAIdyup cloud proxy;
+- uses bounded workflow-list and exact-workflow `GET` requests;
+- rejects redirects and mutating HTTP methods;
+- reads the token only from the named environment variable;
+- sanitizes current configuration before local evidence processing;
+- performs analysis and reconciliation locally;
+- does not call credential or execution endpoints;
+- does not validate credentials, infer authorization, execute workflows, poll, or monitor.
 
-**Align what you declare with what you build.**
+A client that only sends `GET` is not necessarily using a technically read-only credential. tAIdyup reports `TECHNICALLY_READ_ONLY` only when provider evidence establishes that property; otherwise the effective mode remains client-enforced or unknown.
 
----
+## The five reconciliation states
 
-# See the difference before it becomes a problem
+| State | Meaning |
+| --- | --- |
+| **`SUPPORTED`** | Every mandatory claim dimension has sufficient compatible evidence. Review the provenance; this is not authorization or certification. |
+| **`UNVERIFIED`** | One or more mandatory dimensions lack sufficient evidence. The declaration is not thereby false. |
+| **`CONFLICT`** | Relevant bound evidence explicitly contradicts a declared dimension or prohibition. |
+| **`UNDECLARED_OBSERVATION`** | A sufficiently bound observed capability is not covered by a declaration. |
+| **`UNKNOWN`** | The available evidence is ambiguous, unsupported, incomplete, or outside current coverage. Uncertainty is preserved rather than guessed away. |
 
-Suppose your project declares:
+## Evidence sources currently supported
 
-```json
-{
-  "capabilities": [
-    {
-      "predicate": "CANNOT",
-      "action": "EXECUTE",
-      "resource": "Terminal / OS Shell"
-    }
-  ]
-}
-```
+### Source code
 
-But during development someone introduces:
+Selective static detection and structural binding for supported patterns in LangChain/LangGraph (Python and TypeScript), CrewAI (Python), AutoGen (Python), LlamaIndex (Python and TypeScript), Semantic Kernel (Python and C#), and MCP configuration/tool schemas.
 
-```typescript
-import { exec } from 'child_process';
+Coverage is pattern-based and incomplete. A target not analyzed or recognized is not evidence that it is non-AI or lacks authority.
 
-exec('rm -rf /tmp/data');
-```
+### Local workflow artifacts
 
-Run:
+A conservative, version-aware subset of local n8n workflow JSON. The adapter recognizes selected AI Agent, tool, model, memory, database, email, command, Code, HTTP, and subworkflow semantics. Agent capability binding requires a supported explicit typed graph relationship; unsupported nodes and versions remain `UNMAPPED`.
+
+Expressions are not evaluated, disabled tools do not emit enabled agent-bound capabilities, pinned data is not runtime evidence, and child workflow authority is not flattened automatically.
+
+### CONNECTED n8n current configuration
+
+An explicit point-in-time retrieval of current configuration for a selected n8n workflow. Evidence retains source, workflow/revision locator, retrieval time, snapshot completeness, graph path, mapping rule, and sanitized provenance where available.
+
+`active` configuration is not execution. A current draft is not assumed to equal an active/published version. A credential reference is not proof of credential existence, validity, scope, or authorization.
+
+### Runtime
+
+Not implemented. Workflow/node/tool invocation, attempted or completed actions, success/failure, timestamps of actual use, frequency, and payload-dependent resource facts still require a future RUNTIME evidence layer.
+
+## Outputs and automation
 
 ```bash
-taidyup validate .
+taidyup report .
 ```
 
-And tAIdyup surfaces the contradiction:
+generates:
 
-```text
-🚨 CONFLICT
-
-CANNOT EXECUTE Terminal / OS Shell
-
-Explicit Declaration Conflict:
-Manifest declared prohibition (CANNOT) for EXECUTE,
-but static analysis observed active agent binding in code.
-
-Declared:
-  taidyup.json:agents[0].capabilities[0]
-
-Observed:
-  src/agent.ts
-```
-
-The important part isn't just that tAIdyup found `child_process`.
-
-It's that the observation **contradicts the authority you explicitly intended for the agent**.
-
----
-
-# And find what nobody declared
-
-The inverse matters too.
-
-An AI project may acquire authority without anybody updating its documentation.
-
-For example, tAIdyup can observe:
-
-```text
-🔍 UNDECLARED
-
-CAN EXECUTE Terminal / OS Shell
-```
-
-and surface:
-
-```text
-CRITICAL — Undeclared Critical Capability
-
-Observation:
-  EXECUTE on Terminal / OS Shell
-
-Provenance:
-  src/agent.ts
-```
-
-That allows you to decide intentionally:
-
-* Should this capability be removed?
-* Or should the project declaration be updated to reflect it?
-
-Without tAIdyup, that capability might have remained unnoticed until release.
-
----
-
-# The 5 Epistemic States of tAIdyup
-
-When tAIdyup runs `validate`, every claim is classified into one of 5 distinct epistemic states:
-
-| Epistemic State | Meaning | Action Needed |
-| :--- | :--- | :--- |
-| **`SUPPORTED`** | Every mandatory claim dimension has sufficient compatible evidence. | ✅ Review provenance; the claim and observed evidence align. |
-| **`UNVERIFIED`** | One or more mandatory dimensions lack sufficient evidence. | ⚠️ Review. The claim may depend on external or runtime facts. |
-| **`CONFLICT`** | Bound evidence contradicts a declared dimension or prohibition. | 🚨 Fix the implementation or revise the declaration intentionally. |
-| **`UNDECLARED_OBSERVATION`** | A bound capability was observed without a covering declaration. | 🔍 Review. Intended authority or accidental capability? |
-| **`UNKNOWN`** | Evidence is ambiguous, unsupported, or incomplete. | ❓ Preserve uncertainty; investigate without guessing. |
-
----
-
-# Track authority changes over time: `taidyup diff`
-
-AI applications evolve continuously.
-
-When you update a dependency, add an agent tool, or refactor logic, compare your previous release report with your current analysis:
+- `taidyup-report.json` — machine-readable `ReconciledTrustState`;
+- `TECHNICAL_PASSPORT.md` — human-readable technical evidence summary;
+- `taidyup.sarif` — SARIF 2.1.0 findings for compatible tooling such as GitHub Code Scanning.
 
 ```bash
 taidyup diff base-report.json target-report.json
 ```
 
-Output:
+compares two saved reconciliation reports and summarizes semantic authority changes. It is an explicit comparison, not monitoring or history storage.
+
+These outputs are available through the CLI. They are not currently views inside the graphical interface.
+
+## How the Trust Kernel works
+
+The Trust Kernel reconciles owner-reviewed declarations with evidence. It does not guess intent or treat a detector hit as universal truth.
 
 ```text
-TAIDYUP AUTHORITY DIFF
-Base:   2026-08-15T20:27:13.911Z
-Target: 2026-08-15T20:27:14.075Z
-
-[NEW CAPABILITIES]
-  + agent:asset-a2c42e7b:EXECUTE:Terminal / OS Shell
+Evidence relevant to a claim
+    ↓
+subject · predicate · action · resource · constraints
+    ↓
+dimensional reconciliation
+    ↓
+ReconciledTrustState + diagnostics + provenance
 ```
 
-You immediately see what authority changed between builds.
+Evidence selection is identity-, scope-, dimension-, provenance-, and time-aware. A partial CONNECTED snapshot can establish presence, but only an appropriately scoped, successful, complete, comparable snapshot can establish absence. A newer observation is not automatically stronger in every dimension.
 
----
+## Local-first, with an explicit network boundary
 
-# What tAIdyup generates
+Default local analysis:
 
-When you run `taidyup report`, tAIdyup generates 3 evidence artifacts in your project:
+- makes no network requests;
+- uploads no source code;
+- emits no telemetry;
+- analyzes, reconciles, and stores outputs locally.
 
-### 1. `taidyup-report.json`
-Complete machine-readable audit report containing claim reconciliation matrix, capability bindings, and source provenance.
+CONNECTED n8n inspection:
 
-### 2. `TECHNICAL_PASSPORT.md`
-Human-readable technical passport summarizing agent assets, declared vs observed capabilities, and evidence findings for clients or team leads.
+- requires explicit user opt-in and a configured target;
+- connects directly to that target using bounded `GET` requests;
+- keeps analysis and reconciliation local;
+- uses no tAIdyup cloud control plane or telemetry.
 
-### 3. `taidyup.sarif`
-OASIS SARIF v2.1.0 static analysis report compatible with **GitHub Code Scanning** and CI/CD security tab integration (`github/codeql-action/upload-sarif@v3`).
+Local-first does not mean that an explicitly requested CONNECTED inspection is offline. The CLI makes the network boundary visible before retrieval.
 
----
+## Current limits
 
-# Supported Framework Ecosystems
+tAIdyup is an Early Alpha. Its useful limits include:
 
-tAIdyup static analysis currently supports automatic capability detection for:
+- source scanner coverage is selective and can miss capabilities or produce false positives;
+- workflow mappings use a deliberately small allowlist rather than universal n8n understanding;
+- n8n is the first and only implemented workflow and CONNECTED provider;
+- unknown/community nodes and unsupported versions remain `UNMAPPED`;
+- dynamic expressions and runtime-selected resources remain unresolved;
+- credential validity and scopes are not checked;
+- CONNECTED snapshots are point-in-time, not continuous monitoring;
+- no RUNTIME evidence layer is implemented;
+- subworkflow authority is not automatically flattened;
+- the graphical interface currently covers local declaration/static analysis, not CONNECTED, diff, Passport, or SARIF;
+- tAIdyup does not establish authorization, safety, security, or compliance.
 
-* **LangChain / LangGraph** (Python & TypeScript)
-* **CrewAI** (Python)
-* **AutoGen** (Python)
-* **LlamaIndex** (Python & TypeScript)
-* **Semantic Kernel** (Python & C#)
-* **MCP — Model Context Protocol** (`mcp.json` servers & tool schemas)
+`UNKNOWN`, `UNVERIFIED`, and `UNMAPPED` are legitimate results. They identify the edge of current evidence instead of hiding it.
 
----
+## Verification
 
-# Privacy & Local-First Guarantee
+The repository includes adversarial and integration tests for Trust Kernel reconciliation, dimensional claim matching, CONNECTED evidence selection and absence, guarded n8n transport, workflow graph binding, scanner provenance, CLI opt-in, the local UI bridge, and the default no-network boundary.
 
-tAIdyup is designed with local-first privacy guarantees:
+The CONNECTED V0 proof used a disposable n8n 2.37.10 instance with synthetic workflows and no workflow execution. Tested behavior is evidence about these implemented contracts; it is not proof of universal correctness across every AI system or n8n version.
 
-* **100% Local Execution:** 0 outbound network requests during analysis.
-* **0 Code Uploads:** Your source code never leaves your workstation or CI server.
-* **0 Telemetry:** No tracking, metrics, or external analytics calls.
+## Early Alpha — help us test it
 
----
+Try tAIdyup on an AI project and tell us:
 
-# What tAIdyup does not do
+- Did it show you something useful?
+- Did it surprise you?
+- Did it misunderstand something?
+- Was something `UNKNOWN` that you expected it to understand?
+- Would you run it again after changing your AI system?
 
-tAIdyup does **not**:
+- [Report a CLI bug](https://github.com/AnarQorp/taidyup/issues/new?template=bug_report.md)
+- [Report detection feedback or a false positive](https://github.com/AnarQorp/taidyup/issues/new?template=detection_feedback.md)
+- [Request framework or detector support](https://github.com/AnarQorp/taidyup/issues/new?template=framework_request.md)
+- [Suggest a feature](https://github.com/AnarQorp/taidyup/issues/new?template=feature_request.md)
+- [Share your Early Alpha experience](https://github.com/AnarQorp/taidyup/issues/new?template=alpha_feedback.md)
 
-* declare that your AI system is EU AI Act compliant;
-* automatically classify systems as high-risk or low-risk;
-* replace contextual assessment under Article 6 / Annex III;
-* issue legal certifications;
-* replace legal or regulatory review.
+## Brand
 
-Code can provide evidence about technical properties.
-
-Code alone cannot determine the complete legal context in which an AI system operates.
-
----
-
-## 🧪 Early Alpha — Help us test tAIdyup on real AI projects
-
-We are looking for developers willing to run `tAIdyup` against AI projects we haven't seen before.
-
-Found a false positive? A capability we missed? A framework we don't understand yet? Tell us:
-
-* 🐞 [Report a CLI bug](https://github.com/AnarQorp/taidyup/issues/new?template=bug_report.md)
-* 🔍 [Report detection feedback or false positive](https://github.com/AnarQorp/taidyup/issues/new?template=detection_feedback.md)
-* 🔌 [Request framework or detector support](https://github.com/AnarQorp/taidyup/issues/new?template=framework_request.md)
-* 💡 [Suggest a feature](https://github.com/AnarQorp/taidyup/issues/new?template=feature_request.md)
-* 💬 [Share your Early Alpha experience ("I tried tAIdyup")](https://github.com/AnarQorp/taidyup/issues/new?template=alpha_feedback.md)
-
----
-
-# Quick start
-
-> **tAIdyup 0.1.0-alpha.1 is an early release. Interfaces and schemas may evolve.**
-
-### Requirements
-
-* Node.js 18+
-
-### Install
-
-For the current Alpha release:
-
-```bash
-npm install -g taidyup@alpha
-```
-
-Once stable releases are published, standard installation will be:
-
-```bash
-npm install -g taidyup
-```
-
-### Initialize your AI project
-
-```bash
-cd your-ai-project
-
-taidyup init
-# Review taidyup.json.draft and explicitly complete agents[] first.
-taidyup init --accept
-```
-
-The first command creates a non-declarative review draft. After the owner explicitly completes a valid declaration in `agents[]`, `--accept` validates it and creates `taidyup.json`. Candidate suggestions are never copied into the declaration.
-
-### Inspect it
-
-```bash
-taidyup scan .
-```
-
-### Reconcile implementation and intent
-
-```bash
-taidyup validate .
-```
-
-### Generate evidence
-
-```bash
-taidyup report
-```
-
-### Compare two releases
-
-```bash
-taidyup diff previous-report.json current-report.json
-```
-
----
-
-# Alpha 1 verification
-
-The current release has passed:
-
-```text
-✓ Unit & integration suite
-✓ Trust Kernel adversarial suite — 100/100 scenarios
-✓ Realistic developer fixtures — 5/5
-✓ Real-world dogfood repositories — 3/3
-✓ TypeScript & frontend production build
-✓ Safety-language audit — 0 prohibited overclaims
-✓ TrustAgent legacy audit — 0 remaining public references
-```
-
-Package details: `taidyup@0.1.0-alpha.1` on npm.
-
----
-
-# Brand & Inspiration
-
-tAIdyup's visual identity is inspired by Pinocchio and handcrafted wooden block mechanics — representing creation, development, discovery, and evidence-backed understanding.
-
-To learn more about the brand identity, materials, and positioning, see [docs/BRAND_IDENTITY.md](docs/BRAND_IDENTITY.md).
+tAIdyup's visual identity is inspired by Pinocchio and handcrafted wooden block mechanics: creation, development, discovery, and evidence-backed understanding. See [Brand Identity](docs/BRAND_IDENTITY.md).
 
 ---
 
@@ -466,7 +331,7 @@ To learn more about the brand identity, materials, and positioning, see [docs/BR
 
 <img src="docs/assets/brand/taidyup-mark.png" alt="tAIdyup Mark" width="80" />
 
-### Know your AI while you build it.
+### What authority did your AI gain while you were building it?
 
 **tAIdyup** — Open source · Local-first · Alpha
 
