@@ -12,11 +12,11 @@ export class LocalAnalysisRequestError extends Error {
   }
 }
 
-export async function requestLocalAnalysis(targetPath: string): Promise<LocalProjectAnalysis> {
+export async function requestLocalAnalysis(targetPath: string, runtimeArtifactPath?: string): Promise<LocalProjectAnalysis> {
   const response = await fetch('/local-api/analyze', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ targetPath })
+    body: JSON.stringify({ targetPath, runtimeArtifactPath })
   });
   const payload = await response.json();
   if (!response.ok) {
@@ -32,7 +32,7 @@ export async function requestLocalAnalysis(targetPath: string): Promise<LocalPro
 export interface ConnectedUiRequest {
   targetPath: string; baseUrl: string; workflowId: string; connectionId: string;
   tokenEnv: string; authorityMode: 'TECHNICALLY_READ_ONLY' | 'CLIENT_ENFORCED_READ_ONLY' | 'UNKNOWN';
-  observedArtifactPath?: string; allowLoopbackHttp?: boolean;
+  observedArtifactPath?: string; runtimeArtifactPath?: string; allowLoopbackHttp?: boolean;
 }
 
 export async function requestConnectedAnalysis(input: ConnectedUiRequest): Promise<ConnectedLocalProjectAnalysis> {

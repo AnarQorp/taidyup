@@ -11,6 +11,7 @@ import {
   validateLocalProjectTarget
 } from '../application/analyzeLocalProject.js';
 import { analyzeConnectedN8nWorkflow } from '../application/analyzeConnectedN8nWorkflow.js';
+import { RuntimeArtifactError } from '../runtime/runtimeEvidence.js';
 
 export interface CliOptions {
   command: string;
@@ -30,6 +31,7 @@ export interface CliOptions {
   observedArtifact?: string;
   manifestFile?: string;
   allowLoopbackHttp?: boolean;
+  runtimeArtifact?: string;
 }
 
 export class CliCore {
@@ -67,6 +69,8 @@ export class CliCore {
           return await this.handleDiff(options);
         case 'connected-n8n':
           return await this.handleConnectedN8n(options);
+        case 'runtime-import':
+          return await this.handleRuntimeImport(options);
         case 'version':
           console.log(`taidyup v${this.VERSION}`);
           return 0;
@@ -76,6 +80,10 @@ export class CliCore {
           return 0;
       }
     } catch (err: any) {
+      if (err instanceof RuntimeArtifactError) {
+        console.error(`❌ Runtime artifact rejected [${err.code}]: ${err.message}`);
+        return 2;
+      }
       console.error(`💥 tAIdyup Internal Error: ${err?.message || err}`);
       return 3;
     }
@@ -209,7 +217,7 @@ export class CliCore {
   private static async handleValidate(options: CliOptions): Promise<number> {
     let analysis;
     try {
-      analysis = await analyzeLocalProject(options.targetPath);
+      analysis = await analyzeLocalProject(options.targetPath, { runtimeArtifactPath: options.runtimeArtifact });
     } catch (error) {
       if (!(error instanceof ProjectAnalysisError)) throw error;
       console.error(`❌ ${error.message}`);
@@ -262,7 +270,7 @@ export class CliCore {
     const outDir = options.outputDir ? path.resolve(options.outputDir) : targetDir;
     let analysis;
     try {
-      analysis = await analyzeLocalProject(targetDir);
+      analysis = await analyzeLocalProject(targetDir, { runtimeArtifactPath: options.runtimeArtifact });
     } catch (error) {
       if (!(error instanceof ProjectAnalysisError)) throw error;
       console.error(`❌ ${error.message}`);
@@ -337,6 +345,23 @@ export class CliCore {
     return 0;
   }
 
+  private static async handleRuntimeImport(options: CliOptions): Promise<number> {
+    if (!options.runtimeArtifact) {
+      console.error('❌ Usage: taidyup runtime-import <artifact.jsonl> [targetDir]');
+      return 2;
+    }
+    const analysis = await analyzeLocalProject(options.targetPath, { runtimeArtifactPath: options.runtimeArtifact });
+    console.log(JSON.stringify({
+      disclosure: {
+        mode: 'EXPLICIT_LOCAL_RUNTIME_IMPORT', network: false, monitoring: false,
+        completeness: 'PARTIAL_OBSERVATION', authorizationEstablished: false
+      },
+      runtime: analysis.runtime,
+      reconciliation: analysis.reconciliation
+    }, null, 2));
+    return 0;
+  }
+
   private static printHelp(): void {
     console.log(`
 tAIdyup CLI v${this.VERSION}
@@ -352,6 +377,7 @@ COMMANDS:
   report    [targetDir]        Export JSON report, TECHNICAL_PASSPORT.md & taidyup.sarif
   diff      <base> <target>    Compute semantic authority diff between two reports
   connected-n8n                Explicitly inspect current n8n workflow configuration
+  runtime-import <jsonl> [dir] Explicitly import a sanitized local runtime artifact
 
 OPTIONS:
   --accept, -y                 Validate and accept owner-reviewed agents[] from the existing draft
@@ -367,6 +393,7 @@ OPTIONS:
   --observed-artifact <file>   Explicit local artifact to compare with current configuration
   --manifest <file>            Owner-reviewed declaration manifest for reconciliation
   --allow-loopback-http        Permit explicit HTTP only on loopback for disposable/local n8n
+  --runtime-artifact <file>    Explicit sanitized JSONL runtime evidence for validate/report
   --version, -v                Print CLI version
   --help, -h                   Print help menu
 `);

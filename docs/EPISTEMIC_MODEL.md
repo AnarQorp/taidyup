@@ -32,8 +32,8 @@ A current complete absence changes a previously supported positive declaration t
 ## State Definitions
 * **`DECLARED`:** Claim originates from a developer declaration manifest.
 * **`OBSERVED`:** Claim originates from static code analysis or AST signals.
-* **`SUPPORTED`:** Manifest declaration is matched by compatible `AGENT_BOUND` code evidence.
-* **`UNVERIFIED`:** Manifest declaration lacks supporting code evidence.
+* **`SUPPORTED`:** Every mandatory declaration dimension is matched by sufficient compatible STATIC and/or CONNECTED evidence under the current Trust Kernel rules. RUNTIME remains orthogonal and does not boost authority.
+* **`UNVERIFIED`:** One or more mandatory declaration dimensions lack sufficient compatible evidence.
 * **`CONFLICT`:** Manifest declared prohibition/absence contradicts active agent binding in code.
 * **`UNDECLARED`:** Code analysis observed an active agent-bound capability not listed in manifest.
 * **`UNKNOWN`:** Evidence is ambiguous or insufficient.

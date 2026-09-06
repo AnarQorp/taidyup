@@ -45,6 +45,59 @@ export type SnapshotCompleteness = 'COMPLETE' | 'PARTIAL' | 'UNKNOWN_COMPLETENES
 export type SnapshotRetrievalStatus = 'SUCCESS' | 'ACCESS_DENIED' | 'UNAVAILABLE';
 export type EvidenceObservation = 'PRESENCE' | 'ABSENCE_OBSERVED';
 
+export type RuntimeEventKind = 'INVOCATION_ATTEMPTED' | 'EXECUTION_STARTED' | 'EXECUTION_COMPLETED' | 'RESULT_OBSERVED';
+export type RuntimeOutcome = 'SUCCEEDED' | 'FAILED' | 'UNKNOWN';
+export type RuntimeObservationCompleteness = 'PARTIAL_OBSERVATION' | 'COMPLETE_RUN_OBSERVATION' | 'BOUNDED_COMPLETE_OBSERVATION';
+export type RuntimeBindingState = 'UNBOUND' | 'PARTIAL' | 'BOUND' | 'CONTRADICTED';
+export type RuntimeBindingMethod = 'CONTEXTUAL' | 'STRUCTURAL' | 'SOURCE_ASSERTED' | 'ATTESTED';
+
+export interface RuntimeDimensionBinding {
+  state: RuntimeBindingState;
+  method?: RuntimeBindingMethod;
+  value?: string;
+  evidence?: string;
+  /** Inspectable reference to evidence established outside the runtime event. */
+  evidenceRef?: string;
+}
+
+export interface RuntimeEvidenceData {
+  schemaVersion: '0.1';
+  eventKind: RuntimeEventKind;
+  eventTime: string;
+  operation: { action: CapabilityAction; resource?: string; constraints?: Record<string, string | number | boolean> };
+  bindings: {
+    subject: RuntimeDimensionBinding;
+    action: RuntimeDimensionBinding;
+    resource: RuntimeDimensionBinding;
+    constraints: RuntimeDimensionBinding;
+  };
+  source: { kind: 'LOCAL_TOOL_WRAPPER' | 'IMPORTED_ARTIFACT'; identity: string };
+  sourceEventId: string;
+  observationScope: { kind: 'RUN' | 'WINDOW'; id: string; startedAt?: string; endedAt?: string };
+  /** Import validation enforces PARTIAL_OBSERVATION in V0. */
+  completeness: RuntimeObservationCompleteness;
+  sanitization: { policy: 'ALLOWLIST_V0'; rawPayloadPersisted: false; droppedFields: string[] };
+  outcome?: RuntimeOutcome;
+  runId?: string;
+  parentEventId?: string;
+  eventHash?: string;
+}
+
+export interface RuntimeAssessment {
+  observationState: 'NO_OBSERVATION' | 'ATTEMPT_OBSERVED' | 'START_OBSERVED' | 'COMPLETION_OBSERVED' | 'RESULT_OBSERVED';
+  latestEvent?: RuntimeEventKind;
+  latestOutcome?: RuntimeOutcome;
+  observedCount: number;
+  observedExecutionInstances?: number;
+  observedEvents?: number;
+  observationWindow?: { startedAt?: string; endedAt?: string };
+  completeness: 'NO_OBSERVATION' | RuntimeObservationCompleteness;
+  binding: RuntimeBindingState;
+  evidenceRefs: string[];
+  diagnostics: string[];
+  lastObservedAt?: string;
+}
+
 export interface ConfigurationIdentity {
   sourceInstance: string;
   scope: string;
@@ -122,6 +175,7 @@ export interface Claim {
   provenance: ProvenanceRecord[];
   resourceDescriptor?: ResourceDescriptor;
   assessment?: ClaimMatchAssessment;
+  runtimeAssessment?: RuntimeAssessment;
 }
 
 export interface Evidence {
@@ -183,4 +237,5 @@ export interface ReconciledTrustState {
   };
   reconciledClaims: Claim[];
   findings: TechnicalFinding[];
+  unboundRuntimeObservations?: Evidence[];
 }

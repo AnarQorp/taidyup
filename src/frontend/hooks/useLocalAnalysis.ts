@@ -12,7 +12,7 @@ export type AnalysisUiState =
 export function useLocalAnalysis(analyzeProject = requestLocalAnalysis) {
   const [state, setState] = useState<AnalysisUiState>({ status: 'idle' });
 
-  async function analyze(targetPath: string) {
+  async function analyze(targetPath: string, runtimeArtifactPath?: string) {
     const normalizedPath = targetPath.trim();
     if (!normalizedPath) {
       setState({ status: 'error', message: 'Choose an existing local project directory.', details: [] });
@@ -20,7 +20,7 @@ export function useLocalAnalysis(analyzeProject = requestLocalAnalysis) {
     }
     setState({ status: 'loading', targetPath: normalizedPath });
     try {
-      setState({ status: 'success', result: await analyzeProject(normalizedPath) });
+      setState({ status: 'success', result: await analyzeProject(normalizedPath, runtimeArtifactPath?.trim() || undefined) });
     } catch (error: any) {
       setState({
         status: 'error',

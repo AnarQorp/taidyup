@@ -36,7 +36,7 @@ function run() {
   assert.match(success, />Connected</);
   assert.match(success, /Not inspected/);
   assert.match(success, />Runtime</);
-  assert.match(success, /Unavailable/);
+  assert.match(success, /No runtime evidence available/);
   assert.match(success, /Technical findings/);
   assert.match(success, /TEST ONLY declaration conflict/);
 

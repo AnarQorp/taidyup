@@ -37,6 +37,27 @@ export class ReportGenerator {
       if (claim.provenance && claim.provenance.length > 0) {
         lines.push(`* **Provenance:** ${claim.provenance.map(p => `\`${p.artifact}${p.location ? ':' + p.location : ''}\``).join(', ')}`);
       }
+      const runtime = claim.runtimeAssessment;
+      if (runtime) {
+        lines.push(`* **Runtime observation:** \`${runtime.observationState}\``);
+        if (runtime.latestOutcome) lines.push(`* **Source-reported outcome:** \`${runtime.latestOutcome}\``);
+        lines.push(`* **Observed execution instances:** ${runtime.observedExecutionInstances ?? runtime.observedCount}`);
+        lines.push(`* **Observed runtime events:** ${runtime.observedEvents ?? runtime.evidenceRefs.length}`);
+        lines.push(`* **Runtime binding:** \`${runtime.binding}\``);
+        lines.push(`* **Runtime coverage:** \`${runtime.completeness}\` (not an exhaustive execution history)`);
+        if (runtime.lastObservedAt) lines.push(`* **Last runtime observation:** \`${runtime.lastObservedAt}\``);
+        lines.push(`* **Runtime limits:** authorization, safety, compliance, downstream effect and result correctness are not established.`);
+      }
+      lines.push(``);
+    }
+
+    if (state.unboundRuntimeObservations?.length) {
+      lines.push(`---`);
+      lines.push(`## UNBOUND RUNTIME OBSERVATIONS\n`);
+      lines.push(`These observations remain useful but are not attributed to an agent because subject binding was not established.`);
+      for (const evidence of state.unboundRuntimeObservations) {
+        lines.push(`* \`${evidence.type}\` at \`${evidence.observedAt}\` — \`${evidence.id}\``);
+      }
       lines.push(``);
     }
 

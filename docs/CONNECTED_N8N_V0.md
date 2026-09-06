@@ -1,6 +1,6 @@
 # CONNECTED n8n V0
 
-CONNECTED n8n is an explicit, local CLI/application path for retrieving current workflow configuration. It is not used by `scan`, `validate`, the local UI, or any default workflow.
+CONNECTED n8n is an explicit, local CLI/application/UI path for retrieving current workflow configuration. It is not used by `scan`, `validate`, or any default workflow; the local UI invokes it only after explicit opt-in.
 
 ## Boundary
 

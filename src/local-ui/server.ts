@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { analyzeLocalProject, ProjectAnalysisError } from '../application/analyzeLocalProject.js';
 import { analyzeConnectedLocalProject } from '../application/analyzeConnectedLocalProject.js';
 import { ConnectedTransportError } from '../connected/n8n/n8nConnectedClient.js';
+import { RuntimeArtifactError } from '../runtime/runtimeEvidence.js';
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
 
@@ -33,13 +34,15 @@ export function createLocalUiApp(options: { distPath?: string } = {}) {
     }
 
     try {
-      const result = await analyzeLocalProject(request.body.targetPath.trim());
+      const runtimeArtifactPath = typeof request.body.runtimeArtifactPath === 'string' && request.body.runtimeArtifactPath.trim()
+        ? request.body.runtimeArtifactPath.trim() : undefined;
+      const result = await analyzeLocalProject(request.body.targetPath.trim(), { runtimeArtifactPath });
       response.setHeader('cache-control', 'no-store');
       return response.json(result);
     } catch (error) {
-      if (error instanceof ProjectAnalysisError) {
+      if (error instanceof ProjectAnalysisError || error instanceof RuntimeArtifactError) {
         return response.status(400).json({
-          error: { code: error.code, message: error.message, details: error.details }
+          error: { code: error.code, message: error.message, details: 'details' in error ? error.details : [] }
         });
       }
       console.error('Local analysis failed:', error);
@@ -64,6 +67,7 @@ export function createLocalUiApp(options: { distPath?: string } = {}) {
         connectionId: body.connectionId, token, tokenEnv,
         authorityMode: ['TECHNICALLY_READ_ONLY', 'CLIENT_ENFORCED_READ_ONLY'].includes(body.authorityMode) ? body.authorityMode : 'UNKNOWN',
         observedArtifactPath: typeof body.observedArtifactPath === 'string' && body.observedArtifactPath.trim() ? body.observedArtifactPath : undefined,
+        runtimeArtifactPath: typeof body.runtimeArtifactPath === 'string' && body.runtimeArtifactPath.trim() ? body.runtimeArtifactPath : undefined,
         allowLoopbackHttp: body.allowLoopbackHttp === true,
         previousConnectedEvidences: previousByConnection.get(key)
       });

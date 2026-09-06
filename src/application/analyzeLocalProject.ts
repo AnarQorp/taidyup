@@ -6,6 +6,7 @@ import { ManifestParser } from '../trust-kernel/manifestParser.js';
 import { ReconciliationEngine } from '../trust-kernel/reconciliationEngine.js';
 import { ScannerAdapter } from '../trust-kernel/scannerAdapter.js';
 import { Claim, Evidence, ReconciledTrustState } from '../trust-kernel/types.js';
+import { importRuntimeArtifact } from '../runtime/runtimeEvidence.js';
 
 export type ProjectAnalysisErrorCode =
   | 'REMOTE_TARGET_NOT_SUPPORTED'
@@ -41,6 +42,7 @@ export interface LocalProjectAnalysis {
   observedClaims: Claim[];
   evidence: Evidence[];
   reconciliation: ReconciledTrustState;
+  runtime?: { artifact: string; diagnostics: string[] };
 }
 
 export function validateLocalProjectTarget(targetPath: string): string {
@@ -63,7 +65,7 @@ export function validateLocalProjectTarget(targetPath: string): string {
   return resolvedTarget;
 }
 
-export async function analyzeLocalProject(targetPath: string): Promise<LocalProjectAnalysis> {
+export async function analyzeLocalProject(targetPath: string, options: { runtimeArtifactPath?: string } = {}): Promise<LocalProjectAnalysis> {
   const resolvedTarget = validateLocalProjectTarget(targetPath);
   const jsonManifestPath = path.join(resolvedTarget, 'taidyup.json');
   const yamlManifestPath = path.join(resolvedTarget, 'taidyup.yaml');
@@ -94,11 +96,12 @@ export async function analyzeLocalProject(targetPath: string): Promise<LocalProj
 
   const scan = await ScannerCore.scanRepository(resolvedTarget);
   const scannerOutput = ScannerAdapter.adaptScanResult(scan);
+  const runtime = options.runtimeArtifactPath ? importRuntimeArtifact(options.runtimeArtifactPath) : undefined;
   const reconciliation = ReconciliationEngine.reconcile(
     [...parsedManifest.claims, ...scannerOutput.claims],
-    [...parsedManifest.evidences, ...scannerOutput.evidences]
+    [...parsedManifest.evidences, ...scannerOutput.evidences, ...(runtime?.evidences || [])]
   );
-  const evidence = [...parsedManifest.evidences, ...scannerOutput.evidences];
+  const evidence = [...parsedManifest.evidences, ...scannerOutput.evidences, ...(runtime?.evidences || [])];
 
   return {
     project: { name: manifestData.project, targetPath: resolvedTarget },
@@ -108,6 +111,7 @@ export async function analyzeLocalProject(targetPath: string): Promise<LocalProj
     declaredClaims: parsedManifest.claims,
     observedClaims: scannerOutput.claims,
     evidence,
-    reconciliation
+    reconciliation,
+    runtime: options.runtimeArtifactPath ? { artifact: path.basename(options.runtimeArtifactPath), diagnostics: runtime?.diagnostics || [] } : undefined
   };
 }

@@ -25,6 +25,8 @@ It summarizes the declared architecture, observable technical evidence, supporte
 * Critical Governance Findings: 1
 
 ## RECONCILED CLAIMS DETAIL
+
+The report identifies the Trust Kernel **schema version**. This is not the npm package version. When runtime evidence is explicitly supplied, each claim keeps authority state and the orthogonal runtime assessment separate, including lifecycle, source-reported outcome, partial coverage, binding and evidence references.
 ### ✅ `agent:support` — CAN READ resource:zendesk
 * Status: `SUPPORTED`
 * Provenance: `src/agent.ts:42`

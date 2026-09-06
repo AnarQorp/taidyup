@@ -31,7 +31,7 @@ tAIdyup helps you explore that system as an evidence-backed map:
 - which evidence and provenance support it;
 - what changed, and what remains unknown.
 
-It does not turn configuration into certainty. It preserves the distance between intent, technical evidence, current connected state, and future runtime facts.
+It does not turn configuration or runtime activity into certainty. It preserves the distance between intent, technical evidence, current connected state, observed runtime activity, and what remains unknown.
 
 ## See your AI, not just another report
 
@@ -77,7 +77,7 @@ OBSERVED                 local source code and supported workflow artifacts
     +
 CONNECTED                explicit point-in-time current configuration
     +
-RUNTIME                  future; not implemented
+RUNTIME                  explicit sanitized local lifecycle evidence
     ↓
 Trust Kernel
     ↓
@@ -226,7 +226,13 @@ An explicit point-in-time retrieval for one selected workflow, retaining its cur
 
 ### Runtime
 
-Not implemented. Workflow/node/tool invocation, attempted or completed actions, success/failure, timestamps of actual use, frequency, and payload-dependent resource facts still require a future RUNTIME evidence layer.
+RUNTIME V0 explicitly imports a strict, sanitized local JSONL artifact produced by the deterministic local tool wrapper. It distinguishes attempted, started and completed execution lifecycle events, source-reported success/failure, evidence-backed dimensional binding, partial observation and unbound observations. It does not monitor providers, retain tool payloads, prove authorization, verify downstream effects, establish result correctness, or claim a complete execution history.
+
+```bash
+taidyup runtime-import ./runtime.jsonl ./project
+taidyup validate ./project --runtime-artifact ./runtime.jsonl
+taidyup report ./project --runtime-artifact ./runtime.jsonl
+```
 
 ## Outputs and automation
 
@@ -293,9 +299,9 @@ tAIdyup is an Early Alpha. Its useful limits include:
 - dynamic expressions and runtime-selected resources remain unresolved;
 - credential validity and scopes are not checked;
 - CONNECTED snapshots are point-in-time, not continuous monitoring;
-- no RUNTIME evidence layer is implemented;
+- RUNTIME V0 is explicit, local, partial and limited to its strict provider-neutral lifecycle schema;
 - subworkflow authority is not automatically flattened;
-- the graphical interface supports explicit n8n CONNECTED inspection, but not diff, Passport, SARIF, runtime evidence, or monitoring;
+- the graphical interface supports explicit n8n CONNECTED inspection and explicit sanitized RUNTIME artifact import, but not diff, Passport, SARIF, or monitoring;
 - tAIdyup does not establish authorization, safety, security, or compliance.
 
 `UNKNOWN`, `UNVERIFIED`, and `UNMAPPED` are legitimate results. They identify the edge of current evidence instead of hiding it.

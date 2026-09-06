@@ -22,12 +22,18 @@ async function main() {
   let observedArtifact;
   let manifestFile;
   let allowLoopbackHttp = false;
+  let runtimeArtifact;
 
   if (command === 'diff') {
     baseFile = args[1];
     targetFile = args[2];
   } else {
-    for (let i = 1; i < args.length; i++) {
+    let startAt = 1;
+    if (command === 'runtime-import' && args[1] && !args[1].startsWith('-')) {
+      runtimeArtifact = args[1];
+      startAt = 2;
+    }
+    for (let i = startAt; i < args.length; i++) {
       const arg = args[i];
       if (arg === '--strict') strict = true;
       else if (arg === '--json') json = true;
@@ -42,6 +48,7 @@ async function main() {
       else if (arg === '--observed-artifact') observedArtifact = args[++i];
       else if (arg === '--manifest') manifestFile = args[++i];
       else if (arg === '--allow-loopback-http') allowLoopbackHttp = true;
+      else if (arg === '--runtime-artifact') runtimeArtifact = args[++i];
       else if (!arg.startsWith('-')) {
         targetPath = arg;
       }
@@ -65,7 +72,8 @@ async function main() {
     connectionId,
     observedArtifact,
     manifestFile,
-    allowLoopbackHttp
+    allowLoopbackHttp,
+    runtimeArtifact
   });
 
   process.exit(exitCode);

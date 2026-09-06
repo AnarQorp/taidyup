@@ -12,6 +12,8 @@ import {
   ReconciliationOptions,
   ResourceDescriptor,
   ResourceRelation,
+  RuntimeAssessment,
+  RuntimeEvidenceData,
   SubjectBindingAssertion,
   TechnicalFinding
 } from './types.js';
@@ -151,6 +153,18 @@ export class ReconciliationEngine {
     const findings: TechnicalFinding[] = [];
     const declaredClaims = inputClaims.filter(claim => claim.source === 'DECLARATION');
     const reconcilableEvidences = inputEvidences.filter(evidence => evidence.sourceType === 'STATIC' || evidence.sourceType === 'CONNECTED');
+    const runtimeInput = inputEvidences.filter(evidence => evidence.sourceType === 'RUNTIME');
+    const runtimeIdentity = new Map<string, Evidence>();
+    const runtimeSetDiagnostics: string[] = [];
+    for (const evidence of runtimeInput) {
+      const data = evidence.data as RuntimeEvidenceData;
+      const key = `${data.source?.identity}\u0000${data.sourceEventId}`;
+      const prior = runtimeIdentity.get(key);
+      if (!prior) runtimeIdentity.set(key, evidence);
+      else if (prior.sha256 === evidence.sha256) runtimeSetDiagnostics.push('DUPLICATE_RUNTIME_EVENT');
+      else runtimeSetDiagnostics.push('RUNTIME_EVENT_ID_CONFLICT');
+    }
+    const runtimeEvidences = [...runtimeIdentity.values()];
     const assertions = options.subjectBindings || [];
 
     for (const declared of declaredClaims) {
@@ -297,6 +311,120 @@ export class ReconciliationEngine {
       }
     }
 
+    const isBoundRuntime = (evidence: Evidence): boolean => {
+      const data = evidence.data as RuntimeEvidenceData;
+      return data.bindings?.subject?.state === 'BOUND' && data.bindings?.action?.state === 'BOUND' &&
+        (!data.operation.resource || data.bindings?.resource?.state === 'BOUND');
+    };
+    const isOccurrence = (evidence: Evidence): boolean => ['EXECUTION_STARTED', 'EXECUTION_COMPLETED', 'RESULT_OBSERVED'].includes((evidence.data as RuntimeEvidenceData).eventKind);
+    const runtimeMatches = (claim: Claim, evidence: Evidence): boolean => {
+      const data = evidence.data as RuntimeEvidenceData;
+      if (!isBoundRuntime(evidence) || data.bindings.subject.value !== claim.subject || data.operation.action !== claim.action) return false;
+      if (claim.resource && data.operation.resource !== claim.resource) return false;
+      for (const [key, value] of Object.entries(claim.constraints || {})) {
+        if (data.operation.constraints?.[key] !== value || data.bindings.constraints.state !== 'BOUND') return false;
+      }
+      return true;
+    };
+    const buildRuntimeAssessment = (events: Evidence[]): RuntimeAssessment => {
+      if (events.length === 0) return { observationState: 'NO_OBSERVATION', observedCount: 0, observedExecutionInstances: 0, observedEvents: 0, completeness: 'NO_OBSERVATION', binding: 'UNBOUND', evidenceRefs: [], diagnostics: [] };
+      const ordered = [...events].sort((a, b) => Date.parse(a.observedAt) - Date.parse(b.observedAt));
+      const diagnostics = new Set<string>(['RUNTIME_PARTIAL_OBSERVATION', ...runtimeSetDiagnostics]);
+      const byRun = new Map<string, Evidence[]>();
+      for (const event of events) {
+        const data = event.data as RuntimeEvidenceData;
+        const run = data.runId || data.observationScope.id;
+        byRun.set(run, [...(byRun.get(run) || []), event]);
+      }
+      for (const runEvents of byRun.values()) {
+        const kinds = new Set(runEvents.map(item => (item.data as RuntimeEvidenceData).eventKind));
+        const completions = runEvents.filter(item => (item.data as RuntimeEvidenceData).eventKind === 'EXECUTION_COMPLETED');
+        if (kinds.has('EXECUTION_COMPLETED') && !kinds.has('EXECUTION_STARTED')) diagnostics.add('RUNTIME_START_MISSING');
+        if (kinds.has('EXECUTION_STARTED') && !kinds.has('EXECUTION_COMPLETED')) diagnostics.add('RUNTIME_COMPLETION_MISSING');
+        if (kinds.has('INVOCATION_ATTEMPTED') && !kinds.has('EXECUTION_STARTED')) diagnostics.add('RUNTIME_ATTEMPT_ONLY');
+        if (completions.length > 1) diagnostics.add('RUNTIME_MULTIPLE_COMPLETIONS');
+        if (new Set(completions.map(item => (item.data as RuntimeEvidenceData).outcome)).size > 1) diagnostics.add('RUNTIME_CONTRADICTORY_OUTCOMES');
+        const chronological = [...runEvents].sort((a, b) => Date.parse(a.observedAt) - Date.parse(b.observedAt));
+        const rank: Record<string, number> = { INVOCATION_ATTEMPTED: 0, EXECUTION_STARTED: 1, EXECUTION_COMPLETED: 2, RESULT_OBSERVED: 3 };
+        for (let index = 1; index < chronological.length; index++) {
+          const before = chronological[index - 1]; const after = chronological[index];
+          if (before.observedAt === after.observedAt) diagnostics.add('RUNTIME_TIME_TIE');
+          if (rank[(before.data as RuntimeEvidenceData).eventKind] > rank[(after.data as RuntimeEvidenceData).eventKind]) diagnostics.add('RUNTIME_TIMESTAMP_INVERSION');
+        }
+      }
+      const kinds = new Set(events.map(item => (item.data as RuntimeEvidenceData).eventKind));
+      const observationState = kinds.has('RESULT_OBSERVED') ? 'RESULT_OBSERVED' : kinds.has('EXECUTION_COMPLETED') ? 'COMPLETION_OBSERVED' : kinds.has('EXECUTION_STARTED') ? 'START_OBSERVED' : 'ATTEMPT_OBSERVED';
+      const latestTime = ordered.at(-1)!.observedAt;
+      const latestCandidates = ordered.filter(item => item.observedAt === latestTime);
+      if (latestCandidates.length > 1) diagnostics.add('RUNTIME_LATEST_EVENT_AMBIGUOUS');
+      const latest = latestCandidates.length === 1 ? latestCandidates[0] : undefined;
+      const completed = ordered.filter(item => (item.data as RuntimeEvidenceData).eventKind === 'EXECUTION_COMPLETED');
+      const lastCompletionTime = completed.at(-1)?.observedAt;
+      const lastCompletions = lastCompletionTime ? completed.filter(item => item.observedAt === lastCompletionTime) : [];
+      if (lastCompletions.length > 1) diagnostics.add('RUNTIME_LATEST_OUTCOME_AMBIGUOUS');
+      const latestOutcome = lastCompletions.length === 1 ? (lastCompletions[0].data as RuntimeEvidenceData).outcome : undefined;
+      const bindingStates = events.map(item => isBoundRuntime(item));
+      const binding = bindingStates.every(Boolean) ? 'BOUND' : bindingStates.some(Boolean) ? 'PARTIAL' : 'UNBOUND';
+      return {
+        observationState, latestEvent: latest ? (latest.data as RuntimeEvidenceData).eventKind : undefined, latestOutcome,
+        observedCount: byRun.size, observedExecutionInstances: byRun.size, observedEvents: events.length,
+        observationWindow: { startedAt: ordered[0].observedAt, endedAt: latestTime },
+        completeness: 'PARTIAL_OBSERVATION', binding, evidenceRefs: events.map(item => item.id),
+        diagnostics: [...diagnostics], lastObservedAt: latestTime
+      };
+    };
+
+    for (const claim of reconciledClaims) {
+      const matches = runtimeEvidences.filter(evidence => runtimeMatches(claim, evidence));
+      claim.runtimeAssessment = buildRuntimeAssessment(matches);
+      if (claim.predicate === 'CANNOT' && matches.some(evidence => isOccurrence(evidence))) {
+        claim.status = 'CONFLICT';
+        if (claim.assessment) {
+          claim.assessment.overall = 'CONFLICT';
+          claim.assessment.predicate = 'CONTRADICTED';
+          claim.assessment.evidenceRefs = Array.from(new Set([...claim.assessment.evidenceRefs, ...matches.map(item => item.id)]));
+          claim.assessment.diagnostics = Array.from(new Set([...claim.assessment.diagnostics, 'RUNTIME_EXPLICIT_PROHIBITION_CONFLICT']));
+        }
+        claim.provenance.push(...matches.map(item => ({ sourceType: 'RUNTIME' as const, artifact: item.artifact, location: item.location, collectorId: item.collectorId, evidenceId: item.id })));
+        if (!findings.some(item => item.id === `finding-conflict-${claim.id}`)) findings.push({
+          id: `finding-conflict-${claim.id}`, type: 'DECLARATION_CONFLICT', severity: 'CRITICAL',
+          title: `Explicit Declaration Conflict: ${claim.action}`,
+          description: 'Observed runtime activity bound to the same subject, capability and resource conflicts with an explicit declaration.',
+          declaredText: `${claim.predicate} ${claim.action} ${claim.resource}`,
+          observedText: 'Runtime occurrence observed; authorization, safety and compliance are not established.',
+          evidenceRefs: matches.map(item => item.id), provenance: { file: matches[0].provenance.file }
+        });
+      }
+    }
+
+    const unboundRuntimeObservations = runtimeEvidences.filter(evidence => !isBoundRuntime(evidence));
+    const runtimeOccurrenceGroups = new Map<string, Evidence[]>();
+    for (const evidence of runtimeEvidences.filter(evidence => isBoundRuntime(evidence) && isOccurrence(evidence))) {
+      const data = evidence.data as RuntimeEvidenceData;
+      if (declaredClaims.some(claim => runtimeMatches(claim, evidence))) continue;
+      const key = `${data.bindings.subject.value}\u0000${data.operation.action}\u0000${data.operation.resource || ''}`;
+      runtimeOccurrenceGroups.set(key, [...(runtimeOccurrenceGroups.get(key) || []), evidence]);
+    }
+    for (const events of runtimeOccurrenceGroups.values()) {
+      const evidence = events[0]; const data = evidence.data as RuntimeEvidenceData;
+      const existing = reconciledClaims.find(claim => claim.source === 'RUNTIME' && claim.subject === data.bindings.subject.value && claim.action === data.operation.action && claim.resource === data.operation.resource);
+      if (existing) continue;
+      const id = `claim-undeclared-runtime-${evidence.id}`;
+      reconciledClaims.push({
+        id, subject: data.bindings.subject.value!, predicate: 'CAN', action: data.operation.action,
+        resource: data.operation.resource, source: 'RUNTIME', status: 'UNDECLARED_OBSERVATION', confidence: 0.85,
+        provenance: events.map(item => ({ sourceType: 'RUNTIME', artifact: item.artifact, location: item.location, collectorId: item.collectorId, evidenceId: item.id })),
+        runtimeAssessment: buildRuntimeAssessment(events)
+      });
+      if (this.CRITICAL_ACTIONS.includes(data.operation.action)) findings.push({
+        id: `finding-undeclared-runtime-${evidence.id}`, type: 'UNDECLARED_CRITICAL_CAPABILITY', severity: 'CRITICAL',
+        title: `Undeclared Runtime Observation: ${data.operation.action}`,
+        description: `Runtime activity for ${data.operation.action} was observed without a matching owner declaration. Authorization, safety and compliance are not established.`,
+        declaredText: `No bound declaration for ${data.operation.action}`, observedText: 'Bound runtime occurrence observed',
+        evidenceRefs: events.map(item => item.id), provenance: { file: evidence.provenance.file }
+      });
+    }
+
     const summary = {
       totalClaims: reconciledClaims.length,
       supportedCount: reconciledClaims.filter(claim => claim.status === 'SUPPORTED').length,
@@ -307,6 +435,6 @@ export class ReconciliationEngine {
       criticalFindingsCount: findings.filter(finding => finding.severity === 'CRITICAL' || finding.severity === 'HIGH').length
     };
 
-    return { schemaVersion: '1.1.0', timestamp, summary, reconciledClaims, findings };
+    return { schemaVersion: '1.2.0', timestamp, summary, reconciledClaims, findings, unboundRuntimeObservations };
   }
 }

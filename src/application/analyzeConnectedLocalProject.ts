@@ -16,10 +16,11 @@ export async function analyzeConnectedLocalProject(input: {
   tokenEnv: string;
   authorityMode: ConnectorAuthorityMode;
   observedArtifactPath?: string;
+  runtimeArtifactPath?: string;
   allowLoopbackHttp?: boolean;
   previousConnectedEvidences?: Evidence[];
 }): Promise<ConnectedLocalProjectAnalysis> {
-  const local = await analyzeLocalProject(input.targetPath);
+  const local = await analyzeLocalProject(input.targetPath, { runtimeArtifactPath: input.runtimeArtifactPath });
   const connected = await analyzeConnectedN8nWorkflow({
     config: {
       provider: 'n8n', baseUrl: input.baseUrl, token: input.token,
@@ -31,7 +32,7 @@ export async function analyzeConnectedLocalProject(input: {
     previousConnectedEvidences: input.previousConnectedEvidences,
     declaredClaims: local.declaredClaims,
     declarationEvidence: local.evidence.filter(item => item.sourceType === 'DECLARATION'),
-    additionalEvidences: local.evidence.filter(item => item.sourceType === 'STATIC')
+    additionalEvidences: local.evidence.filter(item => item.sourceType === 'STATIC' || item.sourceType === 'RUNTIME')
   });
   const evidence = [
     ...local.evidence,
