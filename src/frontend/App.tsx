@@ -33,15 +33,12 @@ export default function App({ analyzeProject, inspectConnected }: { analyzeProje
       <div className="h-1 wood-header-strip w-full" />
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3.5">
         <div className="flex items-center gap-3.5">
-          <div className="flex items-center justify-center rounded-md border border-[#725B38]/40 bg-[#C8B698]/30 p-2 shadow-inner">
-            <span className="font-mono text-base font-bold text-[#1E50C8]">t&gt;_</span>
-          </div>
-          <div>
+          <img src="/brand/taidyup-woodcraft-logo.png" alt="tAIdyup logo" className="h-9 w-auto object-contain drop-shadow-2xs select-none" />
+          <div className="border-l border-[#1A1D20]/15 pl-3.5">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-[#1A1D20] tracking-tight heading-font">tAIdyup</h1>
               <span className="rounded border border-[#1E50C8]/30 bg-[#1E50C8]/10 px-2 py-0.5 font-mono text-[10px] font-bold text-[#1E50C8]">WORKBENCH ALPHA</span>
             </div>
-            <p className="text-xs font-semibold text-[#725B38] italic">"Know your AI while you build it."</p>
+            <p className="text-xs font-semibold text-[#725B38] italic mt-0.5">"Know your AI while you build it."</p>
             <p className="text-[11px] text-[#5C6068]">Local-first developer workbench to check, understand, and evidence AI capabilities.</p>
           </div>
         </div>
