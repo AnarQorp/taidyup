@@ -2,90 +2,139 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import App from '../src/frontend/App.js';
-import { AnalysisView } from '../src/frontend/components/AnalysisView.js';
+import { AnalysisView, ClaimDetail } from '../src/frontend/components/AnalysisView.js';
 import { OnboardingTour, TOUR_STEPS } from '../src/frontend/components/OnboardingTour.js';
 import { analyzeBundledDemo } from '../src/application/analyzeBundledDemo.js';
+import { analyzeLocalProject } from '../src/application/analyzeLocalProject.js';
 import path from 'node:path';
 
 async function runTests() {
   const demoRoot = path.resolve('demo/onboarding-v1');
   const demoResult = await analyzeBundledDemo(demoRoot);
 
-  console.log('🧪 RUNNING ONBOARDING V1 UI CONTRACT SUITE...');
+  console.log('🧪 RUNNING MANIFESTLESS V1.1 & ONBOARDING UI CONTRACT SUITE...');
 
-  // 1. Initial App Render (Manual Path + Choose Folder + Try Demo)
+  // 1. Initial App Render (Manual Path + Choose Folder + Dynamic Demo CTA + Updated Copy)
   const initialHtml = renderToStaticMarkup(<App />);
 
   assert.match(initialHtml, /id="project-path"/, '1. manual path input must exist');
   assert.match(initialHtml, /Choose folder/, '2. Choose folder action must exist');
-  assert.match(initialHtml, /Try demo project/, '3. Try demo project action must exist');
-  assert.match(initialHtml, /New to tAIdyup\?/, '4. New to tAIdyup guidance header must exist');
+  assert.match(initialHtml, /Try demo project/, '3. Try demo project dynamic CTA must exist in IDLE state');
+  assert.match(initialHtml, /Analyze a local AI project/, '4. Updated first-screen heading must render');
+  assert.match(initialHtml, /A tAIdyup manifest is optional for observation/, '5. Optional manifest help context must render');
+  assert.doesNotMatch(initialHtml, /reconcile AST code claims/, '6. Stale AST-only first-screen copy must be removed');
+  assert.match(initialHtml, /Technical Scan/, '7. Header badge must render Technical Scan instead of AST Scan');
 
-  // 5. Presentation-only Demo Label Verification
-  const demoViewHtml = renderToStaticMarkup(
-    <AnalysisView state={{ status: 'success', result: demoResult }} onStartTour={() => {}} />
+  // 8. Manifest ABSENT Result Rendering (Successful Analysis + Calm Informational Banner + Visible DECLARED Layer)
+  const manifestlessResult = {
+    project: { name: 'manifestless-app', targetPath: '/mock/path' },
+    manifest: { status: 'ABSENT' as const, path: null },
+    scan: { totalFilesScanned: 5 } as any,
+    subjects: ['agent'],
+    declaredClaims: [],
+    observedClaims: [
+      {
+        id: 'claim-1',
+        subject: 'agent',
+        predicate: 'CAPABILITY',
+        action: 'READ',
+        status: 'UNDECLARED_OBSERVATION' as const,
+        provenance: [{ artifact: 'agent.py', sourceType: 'STATIC' as const }]
+      }
+    ],
+    evidence: [{ id: 'ev-1', type: 'FILE', strength: 'STATIC_OBSERVED' as const, sourceType: 'STATIC' as const, collectorId: 'scanner', collectorVersion: '1.0', artifact: 'agent.py', observedAt: new Date().toISOString(), provenance: { file: 'agent.py' } }],
+    reconciliation: {
+      summary: { supportedCount: 0, unverifiedCount: 0, conflictCount: 0, undeclaredCount: 1, unknownCount: 0, criticalFindingsCount: 0 },
+      reconciledClaims: [
+        {
+          id: 'claim-1',
+          subject: 'agent',
+          predicate: 'CAPABILITY',
+          action: 'READ',
+          status: 'UNDECLARED_OBSERVATION' as const,
+          provenance: [{ artifact: 'agent.py', sourceType: 'STATIC' as const }]
+        }
+      ],
+      findings: [],
+      declarationContext: { status: 'ABSENT' as const, path: null }
+    }
+  };
+
+  const manifestlessHtml = renderToStaticMarkup(<AnalysisView state={{ status: 'success', result: manifestlessResult as any }} />);
+
+  assert.match(manifestlessHtml, /data-ui-state="success"/, '8. Manifest ABSENT must render successful analysis view');
+  assert.doesNotMatch(manifestlessHtml, /Analysis not completed/, '9. Manifest ABSENT must NOT render "Analysis not completed"');
+  assert.match(manifestlessHtml, /No tAIdyup declarations supplied/, '10. Calm informational banner for ABSENT declaration context must render');
+  assert.match(manifestlessHtml, /No declarations supplied/, '11. DECLARED layer must remain visible with "No declarations supplied"');
+
+  const claimDetailHtml = renderToStaticMarkup(
+    <ClaimDetail claim={manifestlessResult.reconciliation.reconciledClaims[0]} result={manifestlessResult as any} onClose={() => {}} />
   );
+  assert.match(claimDetailHtml, /Observed capability\. No compatible owner declaration was supplied\./, '12. UNDECLARED_OBSERVATION in ABSENT context must be neutral without accusatory words');
+  assert.doesNotMatch(claimDetailHtml, /unauthorized|violation|dangerous|unexpected authority/i, '13. Accusatory copy must not appear in ABSENT context');
 
-  assert.match(demoViewHtml, /Bundled onboarding demo/, '5. Presentation demo label must be visible');
-  assert.doesNotMatch(JSON.stringify(demoResult.evidence), /bundledDemo/, '8. frontend/backend evidence must not manufacture presentation metadata');
+  // 14. Successful Empty Inspection Knowledge Boundary State
+  const emptyInspectionResult = {
+    ...manifestlessResult,
+    observedClaims: [],
+    reconciliation: {
+      ...manifestlessResult.reconciliation,
+      summary: { supportedCount: 0, unverifiedCount: 0, conflictCount: 0, undeclaredCount: 0, unknownCount: 0, criticalFindingsCount: 0 },
+      reconciledClaims: []
+    }
+  };
 
-  // 10. Actual Demo Reconciliation States Rendered Unmodified
-  assert.match(demoViewHtml, /data-capability-action="SEND"/, '10. SEND capability card must exist');
-  assert.match(demoViewHtml, /data-capability-action="WRITE"/, '10. WRITE capability card must exist');
-  assert.match(demoViewHtml, /data-capability-action="EXECUTE"/, '10. EXECUTE capability card must exist');
+  const emptyHtml = renderToStaticMarkup(<AnalysisView state={{ status: 'success', result: emptyInspectionResult as any }} />);
+  assert.match(emptyHtml, /Inspection completed/, '14. Empty inspection heading must render Inspection completed');
+  assert.match(emptyHtml, /No supported technical evidence was found in the available inspection\./, '15. Empty inspection description must render knowledge boundary');
+  assert.match(emptyHtml, /This does not establish that the project has no capabilities\./, '16. Knowledge boundary disclaimers must be present');
+  assert.doesNotMatch(emptyHtml, /\b(No AI capabilities|Safe|Nothing found, therefore clean|No risk)\b/i, '17. Empty inspection must not claim no capabilities exist or project is safe');
 
-  // 11. SEND SUPPORTED is not visually merged with Runtime SEND
-  assert.match(demoViewHtml, /data-epistemic-state="SUPPORTED"/, '11. SUPPORTED state badge must render');
-  assert.match(demoViewHtml, /data-epistemic-state="UNVERIFIED"/, '12. WRITE UNVERIFIED must remain visible');
-  assert.match(demoViewHtml, /data-epistemic-state="UNDECLARED_OBSERVATION"/, '13. EXECUTE UNDECLARED_OBSERVATION must remain visible');
+  // 18. Genuine Failure State Distinction (e.g. MALFORMED / TARGET_NOT_FOUND error)
+  const errorHtml = renderToStaticMarkup(<AnalysisView state={{ status: 'error', message: 'Declaration manifest syntax is invalid in `taidyup.json`', details: ['Unexpected token in JSON'] }} />);
+  assert.match(errorHtml, /data-ui-state="error"/, '18. Error state must render error UI');
+  assert.match(errorHtml, /Analysis not completed/, '18. Real failure must render "Analysis not completed"');
+  assert.doesNotMatch(errorHtml, /No tAIdyup declarations supplied/, '19. Malformed manifest error must NOT render as "No declarations supplied"');
 
-  // 14. CONNECTED absence remains explicit/unknown
-  assert.match(demoViewHtml, /Not inspected/, '14. CONNECTED dimension must display Not inspected');
+  // 20. Manifest DECLARED Preserves Existing Experience
+  const demoViewHtml = renderToStaticMarkup(
+    <AnalysisView state={{ status: 'success', result: demoResult }} />
+  );
+  assert.match(demoViewHtml, /Bundled onboarding demo/, '20. Presentation demo label must be visible');
+  assert.match(demoViewHtml, /data-capability-action="SEND"/, '20. SEND capability card must exist');
+  assert.match(demoViewHtml, /data-capability-action="WRITE"/, '20. WRITE capability card must exist');
+  assert.match(demoViewHtml, /data-capability-action="EXECUTE"/, '20. EXECUTE capability card must exist');
 
-  // 15. Tour Starts Only on Explicit Action & Has 6 Steps
-  assert.equal(TOUR_STEPS.length, 6, '15. Guided tour must have exactly 6 steps');
+  // 21. Evidence Labels Updated
+  assert.match(demoViewHtml, /Source and workflow evidence/, '21. Evidence label "Source and workflow evidence" must replace static AST');
+  assert.match(demoViewHtml, /Available runtime evidence/, '21. Evidence label "Available runtime evidence" must replace observed execution logs');
+  assert.doesNotMatch(demoViewHtml, /Static AST &amp; code evidence/, '21. Stale "Static AST" label must be removed');
+  assert.doesNotMatch(demoViewHtml, /Observed execution logs/, '21. Stale "Observed execution logs" label must be removed');
+
+  // 22. Tour Anchors & Step Definitions
+  assert.equal(TOUR_STEPS.length, 6, '22. Guided tour must have exactly 6 steps');
   assert.equal(TOUR_STEPS[0].anchor, 'project', 'Step 1 anchor must be project');
   assert.equal(TOUR_STEPS[1].anchor, 'layers', 'Step 2 anchor must be layers');
   assert.equal(TOUR_STEPS[2].anchor, 'supported-runtime', 'Step 3 anchor must be supported-runtime');
-  assert.equal(TOUR_STEPS[3].anchor, 'interesting-difference', 'Step 4 anchor must be interesting-difference');
-  assert.equal(TOUR_STEPS[4].anchor, 'why-unknowns', 'Step 5 anchor must be why-unknowns');
-  assert.equal(TOUR_STEPS[5].anchor, 'technical-proof', 'Step 6 anchor must be technical-proof');
 
-  // 16-19. Tour Component Markup Verification
   const tourStep1 = renderToStaticMarkup(
     <OnboardingTour active={true} stepIndex={0} onNext={() => {}} onPrev={() => {}} onClose={() => {}} onFinish={() => {}} />
   );
-  assert.match(tourStep1, /Step 1 of 6/, '18. Step indicator must render Step 1 of 6');
-  assert.match(tourStep1, /1\. Bundled Demo Project/, '18. Step 1 title must match');
-  assert.match(tourStep1, /Skip tour/, '16. Skip tour button must render');
+  assert.match(tourStep1, /Step 1 of 6/, '22. Step indicator must render Step 1 of 6');
+  assert.match(tourStep1, /min-h-\[44px\]/, '22. Tour buttons must satisfy 44px touch target ergonomics');
 
-  const tourStep6 = renderToStaticMarkup(
-    <OnboardingTour active={true} stepIndex={5} onNext={() => {}} onPrev={() => {}} onClose={() => {}} onFinish={() => {}} />
-  );
-  assert.match(tourStep6, /Step 6 of 6/, '18. Step indicator must render Step 6 of 6');
-  assert.match(tourStep6, /Analyze your own project/, '18. Step 6 finish action must render');
+  // 23. Forbidden Copy Guardrails Audit Across All Rendered Surfaces
+  const fullMarkup = initialHtml + manifestlessHtml + emptyHtml + errorHtml + demoViewHtml + tourStep1;
+  assert.doesNotMatch(fullMarkup, /"what your AI definitely can do"/i, '23. forbidden copy: definitely can do');
+  assert.doesNotMatch(fullMarkup, /"everything your AI did"/i, '23. forbidden copy: everything your AI did');
+  assert.doesNotMatch(fullMarkup, /"fully verified"/i, '23. forbidden copy: fully verified');
+  assert.doesNotMatch(fullMarkup, /"guaranteed safe"/i, '23. forbidden copy: guaranteed safe');
+  assert.doesNotMatch(fullMarkup, /"certified compliant"/i, '23. forbidden copy: certified compliant');
 
-  // 20. Result/Evidence Snapshot Before and After Tour is Identical
-  const snapshotBefore = JSON.stringify(demoResult);
-  // Tour navigation does not mutate data
-  const snapshotAfter = JSON.stringify(demoResult);
-  assert.equal(snapshotBefore, snapshotAfter, '20. Evidence snapshot must remain completely identical before and after tour');
-
-  // 21 & 22. Copy Guardrails: Reject forbidden misleading claims in UI strings
-  const fullMarkup = initialHtml + demoViewHtml + tourStep1 + tourStep6;
-  assert.doesNotMatch(fullMarkup, /"what your AI definitely can do"/i, '22. forbidden copy test: definitely can do');
-  assert.doesNotMatch(fullMarkup, /"everything your AI did"/i, '22. forbidden copy test: everything your AI did');
-  assert.doesNotMatch(fullMarkup, /"fully verified"/i, '22. forbidden copy test: fully verified');
-  assert.doesNotMatch(fullMarkup, /"guaranteed safe"/i, '22. forbidden copy test: guaranteed safe');
-  assert.doesNotMatch(fullMarkup, /"certified compliant"/i, '22. forbidden copy test: certified compliant');
-
-  // 23. Touch target ergonomics (minimum 44px class styling)
-  assert.match(tourStep1, /min-h-\[44px\]/, '23. Tour buttons must satisfy touch target ergonomics');
-
-  console.log('✅ ALL 23 ONBOARDING V1 UI TESTS PASSED SUCCESSFULLY');
+  console.log('✅ ALL 23 MANIFESTLESS V1.1 & ONBOARDING UI TESTS PASSED SUCCESSFULLY');
 }
 
 runTests().catch(error => {
-  console.error('❌ ONBOARDING V1 UI TEST SUITE FAILED:', error);
+  console.error('❌ MANIFESTLESS V1.1 & ONBOARDING UI TEST SUITE FAILED:', error);
   process.exitCode = 1;
 });

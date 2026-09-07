@@ -34,11 +34,13 @@ export default function App({ analyzeProject, inspectConnected }: { analyzeProje
 
   function submit(event: FormEvent) {
     event.preventDefault();
+    onboarding.resetDemoState();
     void analyze(targetPath, runtimeArtifactPath);
   }
 
   function inspect(event: FormEvent) {
     event.preventDefault();
+    onboarding.resetDemoState();
     void connected.connect({ targetPath, ...connectedInput, observedArtifactPath: connectedInput.observedArtifactPath || undefined, runtimeArtifactPath: runtimeArtifactPath.trim() || undefined });
   }
 
@@ -58,7 +60,7 @@ export default function App({ analyzeProject, inspectConnected }: { analyzeProje
           </div>
         </div>
         <div className="hidden md:flex items-center gap-4 text-xs code-font text-[#5C6068]">
-          <span className="flex items-center gap-1.5 rounded bg-white/60 px-2.5 py-1 border border-[#1A1D20]/10 shadow-2xs"><Cpu className="h-3.5 w-3.5 text-[#1E50C8]" /> AST Scan</span>
+          <span className="flex items-center gap-1.5 rounded bg-white/60 px-2.5 py-1 border border-[#1A1D20]/10 shadow-2xs"><Cpu className="h-3.5 w-3.5 text-[#1E50C8]" /> Technical Scan</span>
           <span className="flex items-center gap-1.5 rounded bg-white/60 px-2.5 py-1 border border-[#1A1D20]/10 shadow-2xs"><Activity className="h-3.5 w-3.5 text-[#6D28D9]" /> Connected n8n</span>
           <span className="flex items-center gap-1.5 rounded bg-white/60 px-2.5 py-1 border border-[#1A1D20]/10 shadow-2xs"><Shield className="h-3.5 w-3.5 text-[#059669]" /> Local First</span>
         </div>
@@ -66,15 +68,18 @@ export default function App({ analyzeProject, inspectConnected }: { analyzeProje
     </header>
 
     <main className="mx-auto max-w-7xl space-y-6 px-6 py-8">
-      {/* Initial Experience: What do you want to analyze? */}
+      {/* Initial Experience: Analyze a local AI project */}
       <section className="workbench-card p-6 shadow-md border border-[#1A1D20]/15">
         <div className="flex items-center justify-between border-b border-[#1A1D20]/10 pb-3 mb-4">
           <div>
             <h2 className="text-base font-bold text-[#1A1D20] flex items-center gap-2 heading-font">
-              <FolderSearch className="h-5 w-5 text-[#1E50C8]" /> What do you want to analyze?
+              <FolderSearch className="h-5 w-5 text-[#1E50C8]" /> Analyze a local AI project
             </h2>
             <p className="mt-1 text-xs text-[#5C6068]">
-              Select a local project directory to reconcile declared capability claims with available local technical evidence.
+              Analyze the evidence available in a local project. tAIdyup separates owner declarations, technical observations, optional connected configuration, and optional runtime evidence.
+            </p>
+            <p className="mt-1 text-[11px] font-medium text-[#1E50C8] italic">
+              A tAIdyup manifest is optional for observation. Without one, tAIdyup can show technical evidence but cannot infer your intended authority.
             </p>
           </div>
           <span className="text-[10px] font-mono font-bold text-[#059669] bg-[#059669]/10 border border-[#059669]/25 px-2.5 py-1 rounded">
@@ -131,7 +136,7 @@ export default function App({ analyzeProject, inspectConnected }: { analyzeProje
             </button>
             <div className="flex items-center gap-2">
               <span className="rounded border border-[#725B38]/40 bg-[#C8B698]/20 px-2 py-0.5 font-mono text-[10px] font-bold text-[#725B38]">OPT-IN</span>
-              <span className="text-[11px] text-[#5C6068]">Token value stays in the local Node process environment. Local AST scan operates without uploading source code or remote APIs.</span>
+              <span className="text-[11px] text-[#5C6068]">Token value stays in the local Node process environment. Local technical scan operates without uploading source code or remote APIs.</span>
             </div>
           </div>
 
@@ -152,7 +157,7 @@ export default function App({ analyzeProject, inspectConnected }: { analyzeProje
                   onChange={event => setRuntimeArtifactPath(event.target.value)}
                   disabled={loading}
                   placeholder="/path/to/sanitized-runtime-events.jsonl (optional)"
-                  className="mt-2.5 w-full rounded border border-[#1A1D20]/20 bg-white px-3 py-2 font-mono text-xs text-[#1A1D20] outline-none focus:border-[#1E50C8]"
+                  className="mt-2.5 w-full rounded border border-[#1A1D20]/20 bg-[#ffffff] px-3 py-2 font-mono text-xs text-[#1A1D20] outline-none focus:border-[#1E50C8]"
                 />
               </div>
 
@@ -187,7 +192,7 @@ export default function App({ analyzeProject, inspectConnected }: { analyzeProje
             </div>
           )}
 
-          {/* Secondary First-Use Path: Try demo project */}
+          {/* Secondary First-Use Path: Dynamic Demo CTA */}
           <div className="mt-6 pt-5 border-t border-[#1A1D20]/15 flex flex-wrap items-center justify-between gap-4 bg-[#F2EFE9]/50 p-4 rounded-lg">
             <div className="max-w-xl">
               <h3 className="text-sm font-bold text-[#1A1D20] flex items-center gap-2 heading-font">
@@ -199,19 +204,20 @@ export default function App({ analyzeProject, inspectConnected }: { analyzeProje
             </div>
             <button
               type="button"
-              onClick={onboarding.handleTryDemo}
-              disabled={loading || onboarding.isDemoLoading}
-              className="rounded-md border border-[#1E50C8]/40 bg-[#1E50C8]/10 px-5 py-2.5 text-xs font-bold text-[#1E50C8] hover:bg-[#1E50C8] hover:text-white transition-all shadow-2xs flex items-center justify-center gap-2 min-h-[44px] cursor-pointer"
+              onClick={onboarding.handleCtaClick}
+              disabled={loading || onboarding.ctaDisabled}
+              className="rounded-md border border-[#1E50C8]/40 bg-[#1E50C8]/10 px-5 py-2.5 text-xs font-bold text-[#1E50C8] hover:bg-[#1E50C8] hover:text-white disabled:opacity-50 transition-all shadow-2xs flex items-center justify-center gap-2 min-h-[44px] cursor-pointer"
+              data-demo-cta-state={onboarding.ctaState}
             >
               <Sparkles className="h-4 w-4" />
-              {onboarding.isDemoLoading ? 'Loading demo…' : 'Try demo project'}
+              {onboarding.ctaLabel}
             </button>
           </div>
         </form>
       </section>
 
       {/* Main Analysis Results View */}
-      <AnalysisView state={displayedState} onStartTour={onboarding.startTour} tourStep={onboarding.tourActive ? onboarding.tourStep : undefined} />
+      <AnalysisView state={displayedState} tourStep={onboarding.tourActive ? onboarding.tourStep : undefined} />
     </main>
 
     {/* Guided Tour Modal Component */}

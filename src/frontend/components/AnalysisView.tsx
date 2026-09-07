@@ -217,7 +217,7 @@ export function ClaimDetail({ claim, result, onClose }: { claim: Claim; result: 
         <section className="rounded-lg border border-[#0D7490]/30 bg-[#0D7490]/10 p-4 relative overflow-hidden">
           <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#0D7490]" />
           <h3 className="text-xs font-bold uppercase tracking-wider text-[#0D7490]">Observed</h3>
-          <p className="mt-2 text-sm font-semibold text-[#1A1D20]">{layers.observed ? '✓ Local AST code evidence found' : '— No local code evidence'}</p>
+          <p className="mt-2 text-sm font-semibold text-[#1A1D20]">{layers.observed ? '✓ Available local technical evidence found' : '— No local technical evidence'}</p>
           {observedEvidence[0] && <p className="mt-2 text-xs text-[#5C6068]">{compactPath(observedEvidence[0].provenance.file)}</p>}
         </section>
 
@@ -278,7 +278,7 @@ export function ClaimDetail({ claim, result, onClose }: { claim: Claim; result: 
 
       {claim.status === 'UNDECLARED_OBSERVATION' && <section className="mt-4 rounded-lg border border-[#6D28D9]/30 bg-[#F5F3FF] p-4 text-xs text-[#6D28D9] flex items-start gap-2">
         <AlertCircle className="h-4 w-4 text-[#6D28D9] shrink-0 mt-0.5" />
-        <div>observed capability that is not currently covered by a reconciled declaration</div>
+        <div>{result.manifest?.status === 'ABSENT' ? 'Observed capability. No compatible owner declaration was supplied.' : 'Observed capability that is not currently covered by a reconciled declaration.'}</div>
       </section>}
 
       {/* Dark Technical Proof / CLI Evidence Drawer */}
@@ -377,7 +377,7 @@ export function AnalysisView({ state, onStartTour, tourStep }: { state: Analysis
   if (state.status === 'idle') return <section className="workbench-card p-8 text-center shadow-md border border-[#1A1D20]/15" data-ui-state="idle">
     <Search className="mx-auto mb-3 h-10 w-10 text-[#1E50C8] opacity-80" />
     <h2 className="text-xl font-bold text-[#1A1D20] heading-font">Select a local project</h2>
-    <p className="mt-2 text-xs text-[#5C6068] max-w-md mx-auto">Enter an absolute path containing your code and declared tAIdyup manifest, then run local reconciliation.</p>
+    <p className="mt-2 text-xs text-[#5C6068] max-w-md mx-auto">Enter an absolute path containing your code, then run local inspection.</p>
   </section>;
 
   if (state.status === 'loading') return <section className="workbench-card p-8 text-center shadow-md border border-[#1A1D20]/15" data-ui-state="loading">
@@ -415,6 +415,21 @@ export function AnalysisView({ state, onStartTour, tourStep }: { state: Analysis
   const changedCount = capabilities.filter(hasCurrentDrift).length;
 
   return <div className="space-y-6" data-ui-state="success">
+    {/* Manifest ABSENT Calm Informational State */}
+    {result.manifest?.status === 'ABSENT' && (
+      <section className="workbench-panel p-4 rounded-lg border border-[#1E50C8]/30 bg-[#1E50C8]/5 text-xs" data-manifest-status="ABSENT">
+        <div className="flex items-start gap-3">
+          <HelpCircle className="h-5 w-5 text-[#1E50C8] shrink-0 mt-0.5" />
+          <div>
+            <h3 className="font-bold text-[#1A1D20] text-sm">No tAIdyup declarations supplied</h3>
+            <p className="mt-1 text-[#5C6068]">
+              Technical evidence was analyzed, but no owner declaration source was provided for this project. Observed capabilities are not owner declarations or authorization.
+            </p>
+          </div>
+        </div>
+      </section>
+    )}
+
     {/* System Overview Header Panel */}
     <section className="workbench-card p-6 shadow-md border border-[#1A1D20]/15" data-tour-anchor="project">
       <div className="flex flex-wrap items-start justify-between gap-5">
@@ -429,17 +444,6 @@ export function AnalysisView({ state, onStartTour, tourStep }: { state: Analysis
           </div>
           <h2 className="mt-1 text-3xl font-bold text-[#1A1D20] heading-font">{result.project.name}</h2>
           <p className="mt-2 text-xs font-mono text-[#5C6068]" title={result.project.targetPath}>{compactPath(result.project.targetPath)}</p>
-
-          {isBundledDemo && onStartTour && (
-            <div className="mt-3 flex items-center gap-3">
-              <button
-                onClick={onStartTour}
-                className="inline-flex items-center gap-1.5 rounded-md bg-[#1E50C8] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#1640A8] transition-all shadow-2xs cursor-pointer min-h-[44px]"
-              >
-                <HelpCircle className="h-4 w-4" /> Show me how to read this
-              </button>
-            </div>
-          )}
         </div>
         <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4 workbench-panel p-4 rounded-lg">
           <div><p className="text-[10px] font-bold uppercase text-[#5C6068]">Subjects</p><p className="mt-1 text-2xl font-bold text-[#1A1D20] heading-font">{result.subjects.length}</p></div>
@@ -473,13 +477,13 @@ export function AnalysisView({ state, onStartTour, tourStep }: { state: Analysis
           <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#1E50C8]" />
           <p className="text-[10px] font-bold uppercase text-[#1E50C8] tracking-wider">Declared</p>
           <p className="mt-1 text-2xl font-bold text-[#1A1D20] heading-font">{layers.declared}</p>
-          <p className="mt-1 text-[10px] text-[#5C6068]">Developer manifest declarations</p>
+          <p className="mt-1 text-[10px] text-[#5C6068]">{result.manifest?.status === 'ABSENT' ? 'No declarations supplied' : 'Developer manifest declarations'}</p>
         </div>
         <div className="rounded-lg border border-[#0D7490]/30 bg-[#0D7490]/10 p-4 relative overflow-hidden">
           <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#0D7490]" />
           <p className="text-[10px] font-bold uppercase text-[#0D7490] tracking-wider">Observed</p>
           <p className="mt-1 text-2xl font-bold text-[#1A1D20] heading-font">{layers.observed}</p>
-          <p className="mt-1 text-[10px] text-[#5C6068]">Static AST &amp; code evidence</p>
+          <p className="mt-1 text-[10px] text-[#5C6068]">Source and workflow evidence</p>
         </div>
         <div className="rounded-lg border border-[#6D28D9]/30 bg-[#6D28D9]/10 p-4 relative overflow-hidden">
           <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#6D28D9]" />
@@ -491,7 +495,7 @@ export function AnalysisView({ state, onStartTour, tourStep }: { state: Analysis
           <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#059669]" />
           <p className="text-[10px] font-bold uppercase text-[#059669] tracking-wider">Runtime</p>
           <p className="mt-1 text-2xl font-bold text-[#1A1D20] heading-font">{layers.runtime || 'No evidence'}</p>
-          <p className="mt-1 text-[10px] text-[#5C6068]">Observed execution logs</p>
+          <p className="mt-1 text-[10px] text-[#5C6068]">Available runtime evidence</p>
         </div>
       </div>
       {connected && <div className="mt-4 rounded-lg border border-[#D97706]/30 bg-[#FFFBEB] p-3 text-xs">
@@ -516,7 +520,16 @@ export function AnalysisView({ state, onStartTour, tourStep }: { state: Analysis
         </select>
       </div>
 
-      {capabilities.length === 0 ? <div className="rounded-lg border border-dashed border-[#1A1D20]/20 p-8 text-center text-xs text-[#5C6068]" data-ui-state="empty">No reconciled capabilities for this selection.</div> : <div className="grid gap-4 lg:grid-cols-2">{capabilities.map(claim => <CapabilityCard key={claim.id} claim={claim} result={result} onOpen={() => setSelectedClaim(claim)} />)}</div>}
+      {capabilities.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-[#1A1D20]/20 p-8 text-center" data-ui-state="empty">
+          <h3 className="text-sm font-bold text-[#1A1D20] heading-font">Inspection completed</h3>
+          <p className="mt-1 text-xs text-[#5C6068] max-w-md mx-auto">
+            No supported technical evidence was found in the available inspection. This does not establish that the project has no capabilities.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">{capabilities.map(claim => <CapabilityCard key={claim.id} claim={claim} result={result} onOpen={() => setSelectedClaim(claim)} />)}</div>
+      )}
 
       {otherClaims.length > 0 && <details className="mt-5 rounded-lg border border-[#1A1D20]/15 bg-white p-4">
         <summary className="cursor-pointer text-xs font-bold text-[#1A1D20]">Other claims and declarations <span className="ml-2 text-[#5C6068] font-mono">{otherClaims.length}</span></summary>
