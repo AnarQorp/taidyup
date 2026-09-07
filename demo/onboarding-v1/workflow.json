@@ -1,0 +1,16 @@
+{
+  "id": "onboarding-demo",
+  "name": "Bundled onboarding workflow",
+  "active": false,
+  "versionId": "onboarding-v1",
+  "nodes": [
+    { "id": "agent", "name": "Demo Mail Assistant", "type": "@n8n/n8n-nodes-langchain.agent", "typeVersion": 2, "position": [0, 0], "parameters": {} },
+    { "id": "gmail", "name": "Gmail", "type": "@n8n/n8n-nodes-langchain.gmailTool", "typeVersion": 2, "position": [200, 0], "parameters": { "operation": "send" } },
+    { "id": "code", "name": "Code", "type": "@n8n/n8n-nodes-langchain.toolCode", "typeVersion": 1, "position": [200, 120], "parameters": { "jsCode": "return [{ json: { ok: true } }];" } }
+  ],
+  "connections": {
+    "Gmail": { "ai_tool": [[{ "node": "Demo Mail Assistant", "type": "ai_tool", "index": 0 }]] },
+    "Code": { "ai_tool": [[{ "node": "Demo Mail Assistant", "type": "ai_tool", "index": 0 }]] }
+  },
+  "settings": {}
+}
