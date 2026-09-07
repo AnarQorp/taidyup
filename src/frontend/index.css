@@ -3,40 +3,77 @@
 @tailwind utilities;
 
 :root {
-  --bg-surface: #031427;
-  --bg-card: #102034;
-  --bg-card-hover: #1b2b3f;
-  --primary-azure: #2563eb;
-  --success-emerald: #10b981;
-  --warning-amber: #f59e0b;
-  --danger-ruby: #ef4444;
-  --text-muted: #8d90a0;
-  --border-subtle: rgba(255, 255, 255, 0.1);
+  --bg-workbench: #F6F3EC;
+  --bg-card: #FFFFFF;
+  --bg-panel: #F2EFE9;
+  --bg-wood-accent: #C8B698;
+  --text-wood-dark: #725B38;
+  --primary-cobalt: #1E50C8;
+  --primary-cobalt-hover: #1640A8;
+  --text-charcoal: #1A1D20;
+  --text-slate: #5C6068;
+  --border-paper: rgba(26, 29, 32, 0.14);
+  --border-wood: #E2DDD4;
+  --shadow-hard: 4px 4px 0px rgba(26, 29, 32, 0.08);
+
+  /* Evidence Layer Tokens */
+  --layer-declared: #1E50C8;
+  --layer-observed: #0D7490;
+  --layer-connected: #6D28D9;
+  --layer-runtime: #059669;
+
+  /* Dark Technical Proof Drawer */
+  --bg-proof-drawer: #131518;
+  --text-proof-code: #E1E4EA;
 }
 
 body {
   margin: 0;
-  background-color: var(--bg-surface);
-  color: #d3e4fe;
-  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-workbench);
+  color: var(--text-charcoal);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 .code-font {
-  font-family: 'JetBrains Mono', 'Geist', monospace;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .heading-font {
   font-family: 'Geist', 'Inter', sans-serif;
 }
 
-/* Glassmorphism containers */
-.glass-panel {
-  background: rgba(16, 32, 52, 0.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border-subtle);
+/* Woodcraft Workbench tactile card styling */
+.workbench-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-paper);
+  box-shadow: var(--shadow-hard);
+  border-radius: 6px;
 }
 
-.glass-panel-hover:hover {
-  background: rgba(27, 43, 63, 0.95);
-  border-color: rgba(37, 99, 235, 0.4);
+.workbench-card-hover {
+  transition: all 0.15s ease-in-out;
+}
+
+.workbench-card-hover:hover {
+  border-color: rgba(30, 80, 200, 0.4);
+  box-shadow: 4px 4px 0px rgba(30, 80, 200, 0.12);
+}
+
+.workbench-panel {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-wood);
+  border-radius: 6px;
+}
+
+/* Wood accent strip */
+.wood-header-strip {
+  background: linear-gradient(90deg, #C8B698 0%, #D8C8B0 100%);
+}
+
+/* Dark CLI Technical Proof Drawer */
+.dark-proof-drawer {
+  background-color: var(--bg-proof-drawer);
+  color: var(--text-proof-code);
+  border-top: 2px solid var(--primary-cobalt);
 }
