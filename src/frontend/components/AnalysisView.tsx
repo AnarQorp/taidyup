@@ -49,9 +49,9 @@ function evidenceForClaim(claim: Claim, result: LocalProjectAnalysis | Connected
 
 function runtimePresentation(claim: Claim): { headline: string; outcome?: string; detail?: string } {
   const runtime = claim.runtimeAssessment;
-  if (!runtime || runtime.observationState === 'NO_OBSERVATION') return { headline: 'No runtime evidence available' };
-  const headline = runtime.observationState === 'ATTEMPT_OBSERVED' ? 'Execution attempt observed' : runtime.observationState === 'START_OBSERVED' ? 'Execution start observed' : runtime.observationState === 'COMPLETION_OBSERVED' ? 'Completion observed' : 'Result observation reported';
-  const outcome = runtime.latestOutcome === 'SUCCEEDED' ? 'Source reported success' : runtime.latestOutcome === 'FAILED' ? 'Source reported failure' : runtime.latestOutcome === 'UNKNOWN' ? 'Source reported unknown outcome' : undefined;
+  if (!runtime || runtime.observationState === 'NO_OBSERVATION') return { headline: 'No runtime evidence available', detail: 'No runtime evidence is not evidence of no execution.' };
+  const headline = runtime.observationState === 'ATTEMPT_OBSERVED' ? 'Execution attempt observed (RUNTIME_SOURCE_EVIDENCE)' : runtime.observationState === 'START_OBSERVED' ? 'Execution start observed (RUNTIME_SOURCE_EVIDENCE)' : runtime.observationState === 'COMPLETION_OBSERVED' ? 'Completion observed (RUNTIME_SOURCE_EVIDENCE)' : 'Result observation reported (RUNTIME_SOURCE_EVIDENCE)';
+  const outcome = runtime.latestOutcome === 'SUCCEEDED' ? 'Source reported success (does not establish result correctness)' : runtime.latestOutcome === 'FAILED' ? 'Source reported failure' : runtime.latestOutcome === 'UNKNOWN' ? 'Source reported unknown outcome' : undefined;
   const instances = runtime.observedExecutionInstances ?? runtime.observedCount;
   const events = runtime.observedEvents ?? runtime.evidenceRefs.length;
   return { headline, outcome, detail: `${instances} distinct execution instance${instances === 1 ? '' : 's'} observed · ${events} runtime event${events === 1 ? '' : 's'} · ${runtime.completeness}` };
@@ -71,7 +71,7 @@ function layerSummary(claim: Claim, result: LocalProjectAnalysis | ConnectedLoca
   return {
     declared: evidence.some(item => item.sourceType === 'DECLARATION') || claim.source === 'DECLARATION',
     observed: evidence.some(item => item.sourceType === 'STATIC'),
-    connected: absence.length ? 'Changed · absent in latest snapshot' : connected.length ? 'Present' : ('connected' in result ? 'No supporting evidence' : 'Not inspected'),
+    connected: absence.length ? 'Changed · absent in latest snapshot' : connected.length ? 'Present' : ('connected' in result ? 'No supporting evidence' : 'Current configuration remains unknown'),
     latestConnected
   };
 }
@@ -230,17 +230,32 @@ export function ClaimDetail({ claim, result, onClose }: { claim: Claim; result: 
         <p className="mt-3 font-bold text-[#B45309] text-xs">Current connected configuration changed.</p>
       </section>}
 
+      {/* Explicit CANNOT Conflict Banner */}
+      {claim.status === 'CONFLICT' && <section className="mt-4 rounded-lg border border-[#DC2626]/40 bg-[#FEF2F2] p-4 text-xs text-[#B91C1C] flex items-start gap-2">
+        <AlertTriangle className="h-4 w-4 text-[#B91C1C] shrink-0 mt-0.5" />
+        <div>
+          <span className="font-bold">Observed runtime activity conflicts with an explicit declaration.</span>
+          <p className="mt-1 text-[#5C6068]">This reflects a dimensional reconciliation conflict between declared manifest constraints and observed activity.</p>
+        </div>
+      </section>}
+
       {/* Knowledge Boundary: What tAIdyup doesn't know */}
       <section className="mt-4 rounded-lg border border-[#1A1D20]/15 bg-white p-4">
         <h3 className="text-xs font-bold uppercase tracking-wider text-[#1A1D20] flex items-center gap-2"><HelpCircle className="h-4 w-4 text-[#1E50C8]" /> What tAIdyup doesn't know</h3>
         <p className="mt-1 text-xs text-[#5C6068]">First-class representation of system uncertainty and evidence boundaries. Unknowns reflect missing or non-exhaustive evidence, not errors or broken scans.</p>
         <ul className="mt-3 grid gap-2 text-sm text-[#5C6068] sm:grid-cols-2">
-          {(!claim.runtimeAssessment || claim.runtimeAssessment.observationState === 'NO_OBSERVATION') && <li className="flex items-start gap-2"><span className="rounded-full bg-[#1A1D20]/10 px-1.5 py-0.5 text-[10px] font-mono font-bold text-[#1A1D20]">?</span> Whether this capability was executed.</li>}
+          {(!claim.runtimeAssessment || claim.runtimeAssessment.observationState === 'NO_OBSERVATION') ? (
+            <>
+              <li className="flex items-start gap-2"><span className="rounded-full bg-[#1A1D20]/10 px-1.5 py-0.5 text-[10px] font-mono font-bold text-[#1A1D20]">?</span> Whether this capability was executed.</li>
+              <li className="flex items-start gap-2"><span className="rounded-full bg-[#1A1D20]/10 px-1.5 py-0.5 text-[10px] font-mono font-bold text-[#1A1D20]">?</span> No runtime evidence is not evidence of no execution.</li>
+            </>
+          ) : (
+            <li className="flex items-start gap-2"><span className="rounded-full bg-[#1A1D20]/10 px-1.5 py-0.5 text-[10px] font-mono font-bold text-[#1A1D20]">?</span> Source-reported execution evidence is present (RUNTIME_SOURCE_EVIDENCE). Source success does not establish result correctness.</li>
+          )}
           <li className="flex items-start gap-2"><span className="rounded-full bg-[#1A1D20]/10 px-1.5 py-0.5 text-[10px] font-mono font-bold text-[#1A1D20]">?</span> Whether the action was authorized.</li>
           <li className="flex items-start gap-2"><span className="rounded-full bg-[#1A1D20]/10 px-1.5 py-0.5 text-[10px] font-mono font-bold text-[#1A1D20]">?</span> Whether the downstream effect occurred.</li>
           <li className="flex items-start gap-2"><span className="rounded-full bg-[#1A1D20]/10 px-1.5 py-0.5 text-[10px] font-mono font-bold text-[#1A1D20]">?</span> Whether the result was correct.</li>
-          <li className="flex items-start gap-2"><span className="rounded-full bg-[#1A1D20]/10 px-1.5 py-0.5 text-[10px] font-mono font-bold text-[#1A1D20]">?</span> Whether all executions were observed.</li>
-          <li className="flex items-start gap-2"><span className="rounded-full bg-[#1A1D20]/10 px-1.5 py-0.5 text-[10px] font-mono font-bold text-[#1A1D20]">?</span> Safety and compliance are not established.</li>
+          <li className="flex items-start gap-2"><span className="rounded-full bg-[#1A1D20]/10 px-1.5 py-0.5 text-[10px] font-mono font-bold text-[#1A1D20]">?</span> Whether all executions were observed (observation exhaustiveness).</li>
         </ul>
       </section>
 
@@ -470,7 +485,7 @@ export function AnalysisView({ state }: { state: AnalysisUiState }) {
         <Terminal className="h-5 w-5 text-[#B45309]" />
         <h2 className="font-bold text-[#1A1D20] text-lg heading-font">Unbound runtime observations</h2>
       </div>
-      <p className="text-xs text-[#5C6068]">Runtime activity was observed, but no evidence-backed subject binding allows attribution to a specific agent.</p>
+      <p className="text-xs text-[#5C6068]">We observed this activity, but cannot establish that this agent performed it.</p>
       <div className="mt-4 grid gap-3 lg:grid-cols-2">{result.reconciliation.unboundRuntimeObservations.map(item => <EvidenceCard key={item.id} evidence={item} />)}</div>
     </section> : null}
 
