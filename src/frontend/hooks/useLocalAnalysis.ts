@@ -30,5 +30,13 @@ export function useLocalAnalysis(analyzeProject = requestLocalAnalysis) {
     }
   }
 
-  return { state, analyze };
+  function setDirectResult(result: LocalProjectAnalysis | ConnectedLocalProjectAnalysis) {
+    setState({ status: 'success', result });
+  }
+
+  function setError(message: string, details: string[] = []) {
+    setState({ status: 'error', message, details });
+  }
+
+  return { state, analyze, setDirectResult, setError };
 }

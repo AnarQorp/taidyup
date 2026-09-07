@@ -1,9 +1,11 @@
-import { FolderSearch, Shield, Cpu, Activity, ChevronDown, ChevronUp, Terminal, Layers } from 'lucide-react';
+import { FolderSearch, Shield, Cpu, Activity, ChevronDown, ChevronUp, Terminal, Layers, FolderPlus, Sparkles, AlertCircle, HelpCircle } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 import type { LocalProjectAnalysis } from '../application/analyzeLocalProject.js';
 import { AnalysisView } from './components/AnalysisView.js';
 import { useLocalAnalysis } from './hooks/useLocalAnalysis.js';
 import { useConnectedAnalysis } from './hooks/useConnectedAnalysis.js';
+import { useOnboarding } from './hooks/useOnboarding.js';
+import { OnboardingTour } from './components/OnboardingTour.js';
 import type { ConnectedUiRequest } from './adapters/localAnalysisAdapter.js';
 import type { ConnectedLocalProjectAnalysis } from '../application/analyzeConnectedLocalProject.js';
 
@@ -12,10 +14,23 @@ export default function App({ analyzeProject, inspectConnected }: { analyzeProje
   const [runtimeArtifactPath, setRuntimeArtifactPath] = useState('');
   const [showAdvancedInputs, setShowAdvancedInputs] = useState(false);
   const [connectedInput, setConnectedInput] = useState({ baseUrl: '', workflowId: '', connectionId: '', tokenEnv: 'N8N_API_KEY', authorityMode: 'UNKNOWN' as const, observedArtifactPath: '', allowLoopbackHttp: false });
-  const { state, analyze } = useLocalAnalysis(analyzeProject);
+  const { state, analyze, setDirectResult, setError } = useLocalAnalysis(analyzeProject);
   const connected = useConnectedAnalysis(inspectConnected);
   const loading = state.status === 'loading';
   const displayedState = connected.state.status === 'available' ? { status: 'success' as const, result: connected.state.result } : connected.state.status === 'error' && connected.state.retainedResult ? { status: 'success' as const, result: connected.state.retainedResult } : state;
+
+  const onboarding = useOnboarding(
+    (selectedPath) => {
+      setTargetPath(selectedPath);
+    },
+    (demoResult) => {
+      setTargetPath(demoResult.project.targetPath);
+      setDirectResult(demoResult);
+    },
+    (errorMessage, details) => {
+      setError(errorMessage, details);
+    }
+  );
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -59,7 +74,7 @@ export default function App({ analyzeProject, inspectConnected }: { analyzeProje
               <FolderSearch className="h-5 w-5 text-[#1E50C8]" /> What do you want to analyze?
             </h2>
             <p className="mt-1 text-xs text-[#5C6068]">
-              Select a local project directory to reconcile AST code claims against AST observations.
+              Select a local project directory to reconcile declared capability claims with available local technical evidence.
             </p>
           </div>
           <span className="text-[10px] font-mono font-bold text-[#059669] bg-[#059669]/10 border border-[#059669]/25 px-2.5 py-1 rounded">
@@ -68,7 +83,7 @@ export default function App({ analyzeProject, inspectConnected }: { analyzeProje
         </div>
 
         <form onSubmit={submit}>
-          <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
             <div className="relative">
               <FolderSearch className="absolute left-3.5 top-3 h-4 w-4 text-[#5C6068]" />
               <input
@@ -81,12 +96,29 @@ export default function App({ analyzeProject, inspectConnected }: { analyzeProje
               />
             </div>
             <button
+              type="button"
+              onClick={onboarding.handleChooseFolder}
+              disabled={loading || onboarding.pickerState.status === 'selecting'}
+              className="rounded-md border border-[#1A1D20]/20 bg-white px-4 py-2.5 text-xs font-bold text-[#1A1D20] hover:bg-[#F2EFE9] disabled:opacity-50 transition-all shadow-2xs flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer"
+            >
+              <FolderPlus className="h-4 w-4 text-[#1E50C8]" />
+              {onboarding.pickerState.status === 'selecting' ? 'Choosing…' : 'Choose folder'}
+            </button>
+            <button
               disabled={loading}
-              className="rounded-md bg-[#1E50C8] px-6 py-2.5 text-xs font-bold text-white hover:bg-[#1640A8] disabled:opacity-50 transition-all shadow-sm flex items-center justify-center gap-2"
+              className="rounded-md bg-[#1E50C8] px-6 py-2.5 text-xs font-bold text-white hover:bg-[#1640A8] disabled:opacity-50 transition-all shadow-sm flex items-center justify-center gap-2 min-h-[44px] cursor-pointer"
             >
               {loading ? 'Analyzing…' : 'Analyze with tAIdyup'}
             </button>
           </div>
+
+          {/* Folder Picker Warning/Error Feedback */}
+          {(onboarding.pickerState.status === 'PICKER_UNAVAILABLE' || onboarding.pickerState.status === 'PICKER_FAILED') && onboarding.pickerState.message && (
+            <p className="mt-2 text-xs font-semibold text-[#B45309] bg-[#FFFBEB] p-2.5 rounded border border-[#D97706]/30 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-[#B45309] shrink-0" />
+              {onboarding.pickerState.message}
+            </p>
+          )}
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
             <button
@@ -154,11 +186,48 @@ export default function App({ analyzeProject, inspectConnected }: { analyzeProje
               </div>
             </div>
           )}
+
+          {/* Secondary First-Use Path: Try demo project */}
+          <div className="mt-6 pt-5 border-t border-[#1A1D20]/15 flex flex-wrap items-center justify-between gap-4 bg-[#F2EFE9]/50 p-4 rounded-lg">
+            <div className="max-w-xl">
+              <h3 className="text-sm font-bold text-[#1A1D20] flex items-center gap-2 heading-font">
+                <Sparkles className="h-4 w-4 text-[#1E50C8]" /> New to tAIdyup?
+              </h3>
+              <p className="mt-1 text-xs text-[#5C6068]">
+                Try the bundled onboarding demo to learn how tAIdyup separates intended authority, available technical evidence, current connections, and observed execution. Takes about 2 minutes.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onboarding.handleTryDemo}
+              disabled={loading || onboarding.isDemoLoading}
+              className="rounded-md border border-[#1E50C8]/40 bg-[#1E50C8]/10 px-5 py-2.5 text-xs font-bold text-[#1E50C8] hover:bg-[#1E50C8] hover:text-white transition-all shadow-2xs flex items-center justify-center gap-2 min-h-[44px] cursor-pointer"
+            >
+              <Sparkles className="h-4 w-4" />
+              {onboarding.isDemoLoading ? 'Loading demo…' : 'Try demo project'}
+            </button>
+          </div>
         </form>
       </section>
 
       {/* Main Analysis Results View */}
-      <AnalysisView state={displayedState} />
+      <AnalysisView state={displayedState} onStartTour={onboarding.startTour} tourStep={onboarding.tourActive ? onboarding.tourStep : undefined} />
     </main>
+
+    {/* Guided Tour Modal Component */}
+    <OnboardingTour
+      active={onboarding.tourActive}
+      stepIndex={onboarding.tourStep}
+      onNext={onboarding.nextStep}
+      onPrev={onboarding.prevStep}
+      onClose={onboarding.stopTour}
+      onFinish={() => {
+        onboarding.stopTour();
+        setTargetPath('');
+        setRuntimeArtifactPath('');
+        document.getElementById('project-path')?.focus();
+        document.getElementById('project-path')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }}
+    />
   </div>;
 }

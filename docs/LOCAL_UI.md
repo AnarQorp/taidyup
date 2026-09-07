@@ -39,6 +39,23 @@ Open `http://127.0.0.1:3001` and enter the absolute path of an existing local pr
 
 Because portable browsers do not reveal an absolute filesystem path from a directory picker, Phase 1 uses an explicit local path field. Filesystem access occurs only in the loopback Node process started by the developer.
 
+## Onboarding V1 primitive contracts
+
+Onboarding V1 adds two POST-only loopback endpoints:
+
+- `/local-api/select-directory` accepts an empty JSON object and returns `SELECTED` with an existing absolute directory, neutral `CANCELLED`, recoverable `PICKER_UNAVAILABLE`, or `PICKER_FAILED`. Node opens a fixed native platform picker without a shell. The endpoint never accepts a command or path and never starts analysis.
+- `/local-api/demo-analysis` accepts an empty JSON object and analyzes only the versioned `demo/onboarding-v1` artifacts through the real manifest, scanner, workflow, runtime, and reconciliation paths. Its `presentation.bundledDemo` marker is UI metadata outside Evidence and reconciliation.
+
+Both endpoints retain the existing local-origin boundary. Folder selection falls back to manual entry when the host has no supported GUI picker. The bundled demo starts no provider and emits no CONNECTED evidence.
+
+## Onboarding V1 UX Experience
+
+The Onboarding V1 UX provides a first-use experience on top of the loopback primitive contracts:
+
+- **Folder Picker Action (`Choose folder`)**: Invokes native `selectDirectory()` via `/local-api/select-directory`. On `SELECTED`, populates the path field without auto-analyzing. On `CANCELLED`, returns neutrally to form. On `PICKER_UNAVAILABLE` or `PICKER_FAILED`, renders non-blocking inline feedback while keeping manual path entry fully usable.
+- **Bundled Demo Path (`Try demo project`)**: Invokes `analyzeBundledDemo()` via `/local-api/demo-analysis`. The UI renders presentation-only metadata (`Bundled onboarding demo`), preserving real reconciliation semantics (`SEND -> SUPPORTED`, `WRITE -> UNVERIFIED`, `EXECUTE -> UNDECLARED_OBSERVATION`, runtime `SEND -> UNDECLARED_OBSERVATION`, `CONNECTED -> absent`).
+- **Guided Tour (`OnboardingTour`)**: 6-step step-by-step coachmark over real UI elements anchored by `data-tour-anchor`. Optional, keyboard-accessible (Esc closes, arrows navigate), with Step 1 replay support. Maintains strict copy guardrails (`SUPPORTED != AUTHORIZED`, `NO_RUNTIME_EVIDENCE != NOT_EXECUTED`) and mutates zero evidence state. Minimum 44px touch target ergonomics.
+
 ## Claim boundary
 
 The UI visualizes declaration and static evidence, and can explicitly request one point-in-time n8n CONNECTED inspection through the local bridge. The browser sends only the environment-variable name; the bridge resolves the token in the local Node process and reuses `analyzeConnectedN8nWorkflow()` and its guarded transport. There is no automatic connection, polling, browser-to-n8n request, credential validation, or execution request.

@@ -1,5 +1,7 @@
 import type { LocalProjectAnalysis, ProjectAnalysisErrorCode } from '../../application/analyzeLocalProject.js';
 import type { ConnectedLocalProjectAnalysis } from '../../application/analyzeConnectedLocalProject.js';
+import type { BundledDemoAnalysis } from '../../application/analyzeBundledDemo.js';
+import type { DirectoryPickerResult } from '../../local-ui/folderPicker.js';
 
 export class LocalAnalysisRequestError extends Error {
   constructor(
@@ -27,6 +29,20 @@ export async function requestLocalAnalysis(targetPath: string, runtimeArtifactPa
     );
   }
   return payload as LocalProjectAnalysis;
+}
+
+export async function selectDirectory(): Promise<DirectoryPickerResult> {
+  const response = await fetch('/local-api/select-directory', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+  const payload = await response.json();
+  if (!response.ok) throw new LocalAnalysisRequestError(payload.error?.code || 'ANALYSIS_FAILED', payload.error?.message || 'The directory picker could not be opened.');
+  return payload as DirectoryPickerResult;
+}
+
+export async function analyzeBundledDemo(): Promise<BundledDemoAnalysis> {
+  const response = await fetch('/local-api/demo-analysis', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+  const payload = await response.json();
+  if (!response.ok) throw new LocalAnalysisRequestError(payload.error?.code || 'ANALYSIS_FAILED', payload.error?.message || 'The bundled demo could not be analyzed.');
+  return payload as BundledDemoAnalysis;
 }
 
 export interface ConnectedUiRequest {

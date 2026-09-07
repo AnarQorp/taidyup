@@ -5,6 +5,8 @@ import { analyzeLocalProject, ProjectAnalysisError } from '../application/analyz
 import { analyzeConnectedLocalProject } from '../application/analyzeConnectedLocalProject.js';
 import { ConnectedTransportError } from '../connected/n8n/n8nConnectedClient.js';
 import { RuntimeArtifactError } from '../runtime/runtimeEvidence.js';
+import { analyzeBundledDemo } from '../application/analyzeBundledDemo.js';
+import { selectLocalDirectory, type DirectoryPickerResult } from './folderPicker.js';
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
 
@@ -17,13 +19,35 @@ function isLoopbackOrigin(origin: string | undefined): boolean {
   }
 }
 
-export function createLocalUiApp(options: { distPath?: string } = {}) {
+export function createLocalUiApp(options: { distPath?: string; demoRoot?: string; selectDirectory?: () => Promise<DirectoryPickerResult> } = {}) {
   const app = express();
   const distPath = options.distPath || path.join(process.cwd(), 'dist');
   const previousByConnection = new Map<string, any[]>();
+  const demoRoot = options.demoRoot || path.join(process.cwd(), 'demo', 'onboarding-v1');
 
   app.disable('x-powered-by');
   app.use(express.json({ limit: '4kb', strict: true }));
+
+  app.post('/local-api/select-directory', async (request, response) => {
+    if (!isLoopbackOrigin(request.get('origin'))) return response.status(403).json({ error: { code: 'NON_LOCAL_ORIGIN', message: 'Only the local UI may open the directory picker.' } });
+    if (request.body && Object.keys(request.body).length) return response.status(400).json({ error: { code: 'PICKER_REQUEST_INVALID', message: 'The directory picker does not accept client commands or paths.' } });
+    const result = await (options.selectDirectory || selectLocalDirectory)();
+    response.setHeader('cache-control', 'no-store');
+    return response.json(result);
+  });
+
+  app.post('/local-api/demo-analysis', async (request, response) => {
+    if (!isLoopbackOrigin(request.get('origin'))) return response.status(403).json({ error: { code: 'NON_LOCAL_ORIGIN', message: 'Only the local UI may start the bundled demo.' } });
+    if (request.body && Object.keys(request.body).length) return response.status(400).json({ error: { code: 'DEMO_REQUEST_INVALID', message: 'The bundled demo does not accept a client-supplied path.' } });
+    try {
+      const result = await analyzeBundledDemo(demoRoot);
+      response.setHeader('cache-control', 'no-store');
+      return response.json(result);
+    } catch (error) {
+      console.error('Bundled demo analysis failed without client-supplied filesystem input.');
+      return response.status(500).json({ error: { code: 'DEMO_ANALYSIS_FAILED', message: 'The bundled demo could not be analyzed.' } });
+    }
+  });
 
   app.post('/local-api/analyze', async (request, response) => {
     if (!isLoopbackOrigin(request.get('origin'))) {

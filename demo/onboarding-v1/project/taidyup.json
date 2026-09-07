@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "project": "tAIdyup Onboarding Demo",
+  "agents": [{
+    "id": "n8n:onboarding-demo:agent",
+    "name": "Demo Mail Assistant",
+    "purpose": "Teach evidence-scoped capability reconciliation without external effects",
+    "owner": { "name": "Bundled Demo Owner", "email": "demo@example.test" },
+    "capabilities": [
+      { "action": "SEND", "resource": "{\"namespace\":\"workflow\",\"version\":\"0\",\"type\":\"email\",\"scope\":\"outbound\",\"artifact\":\"@n8n/n8n-nodes-langchain.gmailTool\"}" },
+      { "action": "WRITE", "resource": "drafts:selected", "constraints": { "approval_required": true } }
+    ]
+  }]
+}
