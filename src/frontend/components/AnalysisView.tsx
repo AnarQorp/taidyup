@@ -270,7 +270,7 @@ export function ClaimDetail({ claim, result, onClose }: { claim: Claim; result: 
       </section>
 
       {/* Knowledge Boundary: What tAIdyup doesn't know */}
-      <section className="mt-4 rounded-lg border border-[#1A1D20]/15 bg-white p-4">
+      <section className="mt-4 rounded-lg border border-[#1A1D20]/15 bg-white p-4" data-tour-anchor="why-unknowns">
         <h3 className="text-xs font-bold uppercase tracking-wider text-[#1A1D20] flex items-center gap-2"><HelpCircle className="h-4 w-4 text-[#1E50C8]" /> What tAIdyup doesn't know</h3>
         <p className="mt-1 text-xs text-[#5C6068]">First-class representation of system uncertainty and evidence boundaries. Unknowns reflect missing or non-exhaustive evidence, not errors or broken scans.</p>
         <ul className="mt-3 grid gap-2 text-sm text-[#5C6068] sm:grid-cols-2">{unknowns.map(item => <li key={item} className="flex items-start gap-2"><span className="rounded-full bg-[#1A1D20]/10 px-1.5 py-0.5 text-[10px] font-mono font-bold text-[#1A1D20]">?</span> {item}</li>)}</ul>
@@ -308,8 +308,9 @@ function CapabilityCard({ claim, result, onOpen }: { claim: Claim; result: Local
   const drift = hasCurrentDrift(claim);
   const snapshot = layers.latestConnected?.data?.connectedSnapshot;
   const runtime = runtimePresentation(claim);
+  const tourAnchor = claim.action === 'SEND' ? 'supported-runtime' : claim.action === 'WRITE' ? 'interesting-difference' : undefined;
 
-  return <article className={`workbench-card workbench-card-hover p-5 relative overflow-hidden ${drift ? 'border-[#D97706]/40 bg-[#FFFBEB]' : ''}`} data-capability-action={claim.action} data-epistemic-state={claim.status}>
+  return <article className={`workbench-card workbench-card-hover p-5 relative overflow-hidden ${drift ? 'border-[#D97706]/40 bg-[#FFFBEB]' : ''}`} data-capability-action={claim.action} data-epistemic-state={claim.status} data-tour-anchor={tourAnchor}>
     <div className="h-1 wood-header-strip absolute top-0 left-0 right-0" />
     <div className="flex flex-wrap items-start justify-between gap-4 pt-1">
       <div>
@@ -349,12 +350,12 @@ function CapabilityCard({ claim, result, onOpen }: { claim: Claim; result: Local
     </div>
 
     <div className="mt-4 flex justify-end">
-      <button onClick={onOpen} className="rounded border border-[#1E50C8]/40 bg-[#1E50C8]/10 px-4 py-1.5 text-xs font-bold text-[#1E50C8] hover:bg-[#1E50C8] hover:text-white transition-all shadow-2xs cursor-pointer">{drift ? 'View change / Why?' : 'Why?'}</button>
+      <button onClick={onOpen} className="rounded border border-[#1E50C8]/40 bg-[#1E50C8]/10 px-4 py-1.5 text-xs font-bold text-[#1E50C8] hover:bg-[#1E50C8] hover:text-white transition-all shadow-2xs cursor-pointer min-h-[44px]">{drift ? 'View change / Why?' : 'Why?'}</button>
     </div>
   </article>;
 }
 
-export function AnalysisView({ state }: { state: AnalysisUiState }) {
+export function AnalysisView({ state, onStartTour }: { state: AnalysisUiState; onStartTour?: () => void }) {
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null);
   const result = state.status === 'success' ? state.result : null;
@@ -390,6 +391,7 @@ export function AnalysisView({ state }: { state: AnalysisUiState }) {
 
   if (!result) return null;
 
+  const isBundledDemo = (result as any).presentation?.bundledDemo === true;
   const connected: ConnectedLocalProjectAnalysis['connected'] | undefined = 'connected' in result
     ? (result as ConnectedLocalProjectAnalysis).connected
     : undefined;
@@ -406,12 +408,30 @@ export function AnalysisView({ state }: { state: AnalysisUiState }) {
 
   return <div className="space-y-6" data-ui-state="success">
     {/* System Overview Header Panel */}
-    <section className="workbench-card p-6 shadow-md border border-[#1A1D20]/15">
+    <section className="workbench-card p-6 shadow-md border border-[#1A1D20]/15" data-tour-anchor="project">
       <div className="flex flex-wrap items-start justify-between gap-5">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[#1E50C8]">System</p>
+          <div className="flex items-center gap-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#1E50C8]">System</p>
+            {isBundledDemo && (
+              <span className="rounded border border-[#1E50C8]/30 bg-[#1E50C8]/10 px-2 py-0.5 font-mono text-[10px] font-bold text-[#1E50C8]">
+                {(result as any).presentation?.label || 'Bundled onboarding demo'}
+              </span>
+            )}
+          </div>
           <h2 className="mt-1 text-3xl font-bold text-[#1A1D20] heading-font">{result.project.name}</h2>
           <p className="mt-2 text-xs font-mono text-[#5C6068]" title={result.project.targetPath}>{compactPath(result.project.targetPath)}</p>
+
+          {isBundledDemo && onStartTour && (
+            <div className="mt-3 flex items-center gap-3">
+              <button
+                onClick={onStartTour}
+                className="inline-flex items-center gap-1.5 rounded-md bg-[#1E50C8] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#1640A8] transition-all shadow-2xs cursor-pointer min-h-[44px]"
+              >
+                <HelpCircle className="h-4 w-4" /> Show me how to read this
+              </button>
+            </div>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4 workbench-panel p-4 rounded-lg">
           <div><p className="text-[10px] font-bold uppercase text-[#5C6068]">Subjects</p><p className="mt-1 text-2xl font-bold text-[#1A1D20] heading-font">{result.subjects.length}</p></div>
@@ -435,7 +455,7 @@ export function AnalysisView({ state }: { state: AnalysisUiState }) {
     </section>
 
     {/* Four Evidence Layers Banner */}
-    <section className="workbench-card p-5 shadow-md border border-[#1A1D20]/15" aria-label="Evidence layers">
+    <section className="workbench-card p-5 shadow-md border border-[#1A1D20]/15" aria-label="Evidence layers" data-tour-anchor="layers">
       <div className="mb-3 flex items-center justify-between border-b border-[#1A1D20]/10 pb-2">
         <h3 className="text-xs font-bold uppercase tracking-wider text-[#1A1D20] flex items-center gap-2 heading-font"><Layers3 className="h-4 w-4 text-[#1E50C8]" /> Four Evidence Dimensions</h3>
         <span className="text-[10px] font-mono text-[#5C6068]">Point-in-time &amp; historical evidence sources</span>
@@ -515,7 +535,7 @@ export function AnalysisView({ state }: { state: AnalysisUiState }) {
     </section>}
 
     {/* Dark Technical Proof / CLI Evidence Drawer */}
-    <details className="dark-proof-drawer rounded-xl p-5 shadow-xl">
+    <details className="dark-proof-drawer rounded-xl p-5 shadow-xl" data-tour-anchor="technical-proof">
       <summary className="flex cursor-pointer list-none items-center gap-2">
         <FileCode2 className="text-[#60A5FA] h-5 w-5" />
         <span className="font-bold text-white text-lg heading-font">Evidence inspector</span>
