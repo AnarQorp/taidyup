@@ -45,10 +45,10 @@ async function run() {
 
     const noManifestTarget = path.join(tempRoot, 'no-manifest');
     fs.mkdirSync(noManifestTarget);
-    await assert.rejects(
-      () => analyzeLocalProject(noManifestTarget),
-      (error: unknown) => error instanceof ProjectAnalysisError && error.code === 'MANIFEST_NOT_FOUND'
-    );
+    const noManifestResult = await analyzeLocalProject(noManifestTarget);
+    assert.equal(noManifestResult.manifest.status, 'ABSENT');
+    assert.equal(noManifestResult.manifest.path, null);
+    assert.equal(noManifestResult.declaredClaims.length, 0);
 
     const projectTarget = path.join(tempRoot, 'project');
     fs.mkdirSync(path.join(projectTarget, 'src'), { recursive: true });
@@ -79,6 +79,7 @@ async function run() {
       [...manualManifest.claims, ...manualScannerOutput.claims],
       [...manualManifest.evidences, ...manualScannerOutput.evidences]
     );
+    manualState.declarationContext = { status: 'PRESENT', path: manifestPath };
 
     assert.deepStrictEqual(
       { ...applicationResult.reconciliation, timestamp: '<timestamp>' },

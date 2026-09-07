@@ -222,7 +222,6 @@ export class CliCore {
       if (!(error instanceof ProjectAnalysisError)) throw error;
       console.error(`❌ ${error.message}`);
       error.details.forEach(detail => console.error(`  - ${detail}`));
-      if (error.code === 'MANIFEST_NOT_FOUND') console.error(`👉 Run \`taidyup init\` to generate a draft manifest.`);
       return 2;
     }
     const reconcileRes = analysis.reconciliation;
@@ -230,6 +229,7 @@ export class CliCore {
     console.log(`\n================================================================================`);
     console.log(`TAIDYUP VALIDATION REPORT`);
     console.log(`Project: ${analysis.project.name} | Timestamp: ${reconcileRes.timestamp}`);
+    console.log(`Declaration source: ${analysis.manifest.status === 'ABSENT' ? 'ABSENT — technical observations are not owner declarations' : 'PRESENT'}`);
     console.log(`================================================================================`);
     console.log(`• Total Claims:         ${reconcileRes.summary.totalClaims}`);
     console.log(`• Supported:            ${reconcileRes.summary.supportedCount} ✅`);

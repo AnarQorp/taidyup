@@ -16,8 +16,8 @@ export class SarifExporter {
       {
         id: 'TA002',
         name: 'UndeclaredCriticalCapability',
-        shortDescription: { text: 'Undeclared critical capability observed in code' },
-        fullDescription: { text: 'Static analysis observed an agent-bound critical capability path (e.g. EXECUTE, DELETE, SEND) that was not declared in the manifest; this is not runtime execution evidence.' },
+        shortDescription: { text: 'Critical capability observation lacks a compatible declaration' },
+        fullDescription: { text: 'Technical evidence reports an agent-bound critical capability path (e.g. EXECUTE, DELETE, SEND) without a compatible declaration. The declaration source may be absent or may not cover it; this does not establish authorization or runtime execution.' },
         defaultConfiguration: { level: 'error' }
       },
       {
@@ -76,6 +76,9 @@ export class SarifExporter {
               rules
             }
           },
+          ...(state.declarationContext
+            ? { properties: { declarationContext: state.declarationContext } }
+            : {}),
           results
         }
       ]

@@ -5,7 +5,9 @@ The Phase 1 UI is a visual client of the same application use case used by the C
 ```text
 local project
   -> analyzeLocalProject
-     -> ManifestParser
+     -> detect declaration manifest
+        -> present: ManifestParser
+        -> absent: empty declaration claims/evidence
      -> ScannerCore
      -> ScannerAdapter
      -> ReconciliationEngine
@@ -53,8 +55,18 @@ Both endpoints retain the existing local-origin boundary. Folder selection falls
 The Onboarding V1 UX provides a first-use experience on top of the loopback primitive contracts:
 
 - **Folder Picker Action (`Choose folder`)**: Invokes native `selectDirectory()` via `/local-api/select-directory`. On `SELECTED`, populates the path field without auto-analyzing. On `CANCELLED`, returns neutrally to form. On `PICKER_UNAVAILABLE` or `PICKER_FAILED`, renders non-blocking inline feedback while keeping manual path entry fully usable.
-- **Bundled Demo Path (`Try demo project`)**: Invokes `analyzeBundledDemo()` via `/local-api/demo-analysis`. The UI renders presentation-only metadata (`Bundled onboarding demo`), preserving real reconciliation semantics (`SEND -> SUPPORTED`, `WRITE -> UNVERIFIED`, `EXECUTE -> UNDECLARED_OBSERVATION`, runtime `SEND -> UNDECLARED_OBSERVATION`, `CONNECTED -> absent`).
-- **Guided Tour (`OnboardingTour`)**: 6-step step-by-step coachmark over real UI elements anchored by `data-tour-anchor`. Optional, keyboard-accessible (Esc closes, arrows navigate), with Step 1 replay support. Maintains strict copy guardrails (`SUPPORTED != AUTHORIZED`, `NO_RUNTIME_EVIDENCE != NOT_EXECUTED`) and mutates zero evidence state. Minimum 44px touch target ergonomics.
+- **Dynamic Demo CTA**: Single canonical action managing the onboarding lifecycle (`Try demo project` → `Analyzing demo…` → `Show me how to read this` → `Tour in progress` → `Restart guided tour`). Replaying the tour reuses existing session state without re-running analysis. Analyzing an own project resets the demo CTA state appropriately.
+- **Guided Tour (`OnboardingTour`)**: 6-step coachmark over real UI elements anchored by `data-tour-anchor`. Optional, keyboard-accessible (Esc closes, arrows navigate), with Step 1 replay support. Maintains strict copy guardrails (`SUPPORTED != AUTHORIZED`, `NO_RUNTIME_EVIDENCE != NOT_EXECUTED`) and mutates zero evidence state. Minimum 44px touch target ergonomics.
+
+## Manifestless V1.1 UX
+
+Manifestless V1.1 supports local projects without a `taidyup.json` or `taidyup.yaml` manifest as valid analysis targets:
+
+- **Manifest Optionality**: A missing manifest (`manifest.status === 'ABSENT'`) is a successful analysis outcome, not an error or failed setup.
+- **Calm Informational Banner**: Displays "No tAIdyup declarations supplied" with context explaining that technical evidence was analyzed, but no owner declaration source was provided for this project.
+- **Declared Layer Preservation**: The DECLARED layer remains visible, explicitly marked as "No declarations supplied".
+- **Neutral Observation Context**: Undeclared observations in an ABSENT context state "Observed capability. No compatible owner declaration was supplied." without using accusatory language.
+- **Successful Empty Inspection**: When an analysis completes with no supported technical evidence found, it renders "Inspection completed — No supported technical evidence was found in the available inspection. This does not establish that the project has no capabilities." as a first-class knowledge-boundary state.
 
 ## Claim boundary
 

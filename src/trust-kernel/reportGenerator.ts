@@ -11,6 +11,11 @@ export class ReportGenerator {
     lines.push(`**Project:** \`${projectName}\`  `);
     lines.push(`**Timestamp:** \`${state.timestamp}\`  `);
     lines.push(`**Report Schema Version:** \`${state.schemaVersion}\`  \n`);
+    if (state.declarationContext?.status === 'ABSENT') {
+      lines.push(`**Declaration source:** \`ABSENT\` — no tAIdyup owner declarations were supplied; technical observations remain evidence, not intended or authorized capabilities.  \n`);
+    } else if (state.declarationContext) {
+      lines.push(`**Declaration source:** \`PRESENT\`  \n`);
+    }
 
     lines.push(`## SUMMARY METRICS`);
     lines.push(`* **Total Claims Evaluated:** ${state.summary.totalClaims}`);

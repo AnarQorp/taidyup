@@ -8,6 +8,7 @@ export interface AuthorityDiffResult {
   addedCapabilities: string[];
   removedCapabilities: string[];
   criticalExpansions: string[];
+  declarationContextChange?: { from: 'PRESENT' | 'ABSENT'; to: 'PRESENT' | 'ABSENT' };
   summaryText: string;
 }
 
@@ -33,11 +34,17 @@ export class DiffEngine {
       .filter(claim => claim.action && criticalActions.includes(claim.action))
       .map(claim => `${claim.subject}:${claim.action}:${claim.resource}`));
     const criticalExpansions = addedCapabilities.filter(capability => criticalTargetCapabilities.has(capability));
+    const baseDeclaration = baseState.declarationContext?.status;
+    const targetDeclaration = targetState.declarationContext?.status;
+    const declarationContextChange = baseDeclaration && targetDeclaration && baseDeclaration !== targetDeclaration
+      ? { from: baseDeclaration, to: targetDeclaration }
+      : undefined;
 
     const lines: string[] = [];
     lines.push(`TAIDYUP CAPABILITY EVIDENCE DIFF`);
     lines.push(`Base:   ${baseState.timestamp}`);
     lines.push(`Target: ${targetState.timestamp}\n`);
+    if (declarationContextChange) lines.push(`[DECLARATION CONTEXT] ${declarationContextChange.from} -> ${declarationContextChange.to}`);
 
     if (newAgents.length > 0) lines.push(`[NEW AGENTS]        + ${newAgents.join(', ')}`);
     if (removedAgents.length > 0) lines.push(`[REMOVED AGENTS]    - ${removedAgents.join(', ')}`);
@@ -66,6 +73,7 @@ export class DiffEngine {
       addedCapabilities,
       removedCapabilities,
       criticalExpansions,
+      declarationContextChange,
       summaryText: lines.join('\n')
     };
   }

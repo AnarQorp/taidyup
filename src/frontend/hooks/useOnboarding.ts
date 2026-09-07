@@ -9,6 +9,8 @@ export interface FolderPickerUiState {
   message?: string;
 }
 
+export type DemoCtaState = 'IDLE' | 'LOADING' | 'LOADED' | 'TOUR_ACTIVE' | 'COMPLETED';
+
 export function useOnboarding(
   onPathSelected: (path: string) => void,
   onDemoLoaded: (result: BundledDemoAnalysis) => void,
@@ -17,7 +19,7 @@ export function useOnboarding(
   const [pickerState, setPickerState] = useState<FolderPickerUiState>({ status: 'idle' });
   const [tourActive, setTourActive] = useState<boolean>(false);
   const [tourStep, setTourStep] = useState<number>(0);
-  const [isDemoLoading, setIsDemoLoading] = useState<boolean>(false);
+  const [demoState, setDemoState] = useState<DemoCtaState>('IDLE');
 
   async function handleChooseFolder() {
     setPickerState({ status: 'selecting' });
@@ -42,27 +44,31 @@ export function useOnboarding(
   }
 
   async function handleTryDemo() {
-    setIsDemoLoading(true);
+    setDemoState('LOADING');
     try {
       const demoResult = await analyzeBundledDemo();
       onDemoLoaded(demoResult);
+      setDemoState('LOADED');
     } catch (error: any) {
+      setDemoState('IDLE');
       onError(
         error?.message || 'The bundled demo could not be analyzed.',
         Array.isArray(error?.details) ? error.details : []
       );
-    } finally {
-      setIsDemoLoading(false);
     }
   }
 
   function startTour() {
     setTourStep(0);
     setTourActive(true);
+    setDemoState('TOUR_ACTIVE');
   }
 
   function stopTour() {
     setTourActive(false);
+    if (demoState === 'TOUR_ACTIVE' || demoState === 'LOADED') {
+      setDemoState('COMPLETED');
+    }
   }
 
   function nextStep() {
@@ -73,17 +79,51 @@ export function useOnboarding(
     setTourStep(prev => (prev > 0 ? prev - 1 : prev));
   }
 
+  function resetDemoState() {
+    setDemoState('IDLE');
+    setTourActive(false);
+    setTourStep(0);
+  }
+
+  const ctaState: DemoCtaState = tourActive ? 'TOUR_ACTIVE' : demoState;
+
+  const ctaLabel =
+    ctaState === 'LOADING'
+      ? 'Analyzing demo…'
+      : ctaState === 'LOADED'
+      ? 'Show me how to read this'
+      : ctaState === 'TOUR_ACTIVE'
+      ? 'Tour in progress'
+      : ctaState === 'COMPLETED'
+      ? 'Restart guided tour'
+      : 'Try demo project';
+
+  const ctaDisabled = ctaState === 'LOADING' || ctaState === 'TOUR_ACTIVE';
+
+  function handleCtaClick() {
+    if (ctaState === 'IDLE') {
+      void handleTryDemo();
+    } else if (ctaState === 'LOADED' || ctaState === 'COMPLETED') {
+      startTour();
+    }
+  }
+
   return {
     pickerState,
     handleChooseFolder,
     handleTryDemo,
-    isDemoLoading,
+    handleCtaClick,
+    ctaState,
+    ctaLabel,
+    ctaDisabled,
+    isDemoLoading: ctaState === 'LOADING',
     tourActive,
     tourStep,
     startTour,
     stopTour,
     nextStep,
     prevStep,
-    setTourStep
+    setTourStep,
+    resetDemoState
   };
 }
