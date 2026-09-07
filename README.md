@@ -134,6 +134,8 @@ Requires Node.js 18+.
 
 The published `taidyup@0.1.0-alpha.2` provides the current CLI commands: `init`, `scan`, `validate`, `report`, `diff`, and explicit `connected-n8n` inspection.
 
+RUNTIME V0 exists on unreleased Git `main`; it is not part of the published npm Alpha 2 package. The CLI version intentionally remains `0.1.0-alpha.2` until a separately approved release.
+
 ```bash
 npm install -g taidyup@alpha
 npx taidyup@alpha --help
@@ -250,7 +252,7 @@ generates:
 taidyup diff base-report.json target-report.json
 ```
 
-compares two saved reconciliation reports and summarizes semantic authority changes. It is an explicit comparison, not monitoring or history storage.
+compares two saved reconciliation reports and summarizes structural capability-evidence changes. It does not establish an authorization change and is an explicit comparison, not monitoring or history storage.
 
 These outputs are available through the CLI. They are not currently views inside the graphical interface.
 

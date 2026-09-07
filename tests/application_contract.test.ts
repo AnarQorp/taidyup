@@ -98,7 +98,8 @@ async function run() {
     assert.match(cliResult.output, new RegExp(`Supported:\\s+${applicationResult.reconciliation.summary.supportedCount}\\b`));
     assert.match(cliResult.output, new RegExp(`Unverified:\\s+${applicationResult.reconciliation.summary.unverifiedCount}\\b`));
     assert.match(cliResult.output, new RegExp(`Conflicts:\\s+${applicationResult.reconciliation.summary.conflictCount}\\b`));
-    assert.match(cliResult.output, new RegExp(`Undeclared Authority:\\s+${applicationResult.reconciliation.summary.undeclaredCount}\\b`));
+    assert.match(cliResult.output, new RegExp(`Undeclared observations:\\s+${applicationResult.reconciliation.summary.undeclaredCount}\\b`));
+    assert.match(cliResult.output, /Runtime: No runtime evidence available \(not evidence of no execution\)/);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

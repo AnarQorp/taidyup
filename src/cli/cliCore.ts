@@ -235,7 +235,7 @@ export class CliCore {
     console.log(`• Supported:            ${reconcileRes.summary.supportedCount} ✅`);
     console.log(`• Unverified:           ${reconcileRes.summary.unverifiedCount} ⚠️`);
     console.log(`• Conflicts:            ${reconcileRes.summary.conflictCount} 🚨`);
-    console.log(`• Undeclared Authority: ${reconcileRes.summary.undeclaredCount} 🔍`);
+    console.log(`• Undeclared observations: ${reconcileRes.summary.undeclaredCount} 🔍`);
     console.log(`• Unknowns:             ${reconcileRes.summary.unknownCount} ❓`);
     console.log(`• Critical Findings:    ${reconcileRes.summary.criticalFindingsCount} 💥`);
     console.log(`--------------------------------------------------------------------------------\n`);
@@ -245,7 +245,15 @@ export class CliCore {
                   claim.status === 'UNVERIFIED' ? '⚠️ UNVERIFIED' :
                   claim.status === 'CONFLICT' ? '🚨 CONFLICT' :
                   claim.status === 'UNDECLARED_OBSERVATION' ? '🔍 UNDECLARED' : '❓ UNKNOWN';
-      console.log(`[${tag.padEnd(14)}] ${claim.subject} CAN ${claim.action || ''} ${claim.resource || ''}`);
+      console.log(`[${tag.padEnd(14)}] ${claim.subject} ${claim.predicate} ${claim.action || ''} ${claim.resource || ''}`);
+      const runtime = claim.runtimeAssessment;
+      if (!runtime || runtime.observationState === 'NO_OBSERVATION') {
+        console.log(`  Runtime: No runtime evidence available (not evidence of no execution)`);
+      } else {
+        const lifecycle = runtime.observationState === 'ATTEMPT_OBSERVED' ? 'Execution attempt observed' : runtime.observationState === 'START_OBSERVED' ? 'Execution start observed' : runtime.observationState === 'COMPLETION_OBSERVED' ? 'Completion observed' : 'Result observation reported';
+        const outcome = runtime.latestOutcome === 'SUCCEEDED' ? ' · source reported success' : runtime.latestOutcome === 'FAILED' ? ' · source reported failure' : runtime.latestOutcome === 'UNKNOWN' ? ' · source reported unknown outcome' : '';
+        console.log(`  Runtime: ${lifecycle}${outcome} · ${runtime.completeness}`);
+      }
     }
 
     if (reconcileRes.findings.length > 0) {
@@ -258,7 +266,7 @@ export class CliCore {
     console.log(`\n================================================================================\n`);
 
     if (options.strict && (reconcileRes.summary.conflictCount > 0 || reconcileRes.summary.criticalFindingsCount > 0)) {
-      console.error(`💥 STRICT MODE FAILED: Critical declaration conflicts or undeclared authority present.`);
+      console.error(`💥 STRICT MODE FAILED: Critical declaration conflicts or undeclared observations present.`);
       return 1;
     }
 
@@ -375,7 +383,7 @@ COMMANDS:
   scan      [targetDir]        Run local AST code scan of AI assets and tools
   validate  [targetDir]        Reconcile taidyup.json against local code scan
   report    [targetDir]        Export JSON report, TECHNICAL_PASSPORT.md & taidyup.sarif
-  diff      <base> <target>    Compute semantic authority diff between two reports
+  diff      <base> <target>    Compare structural capability evidence between two reports
   connected-n8n                Explicitly inspect current n8n workflow configuration
   runtime-import <jsonl> [dir] Explicitly import a sanitized local runtime artifact
 

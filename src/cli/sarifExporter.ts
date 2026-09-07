@@ -10,14 +10,14 @@ export class SarifExporter {
         id: 'TA001',
         name: 'DeclarationConflict',
         shortDescription: { text: 'Manifest declaration contradicts observed code binding' },
-        fullDescription: { text: 'The developer manifest declared a prohibition or missing capability that static code analysis observed as an active agent-bound execution in source code.' },
+        fullDescription: { text: 'The developer manifest declared a prohibition or missing capability that static analysis contradicted with an agent-bound capability path in source code.' },
         defaultConfiguration: { level: 'error' }
       },
       {
         id: 'TA002',
         name: 'UndeclaredCriticalCapability',
         shortDescription: { text: 'Undeclared critical capability observed in code' },
-        fullDescription: { text: 'Static code analysis observed an active agent-bound critical capability (e.g. EXECUTE, DELETE, SEND) that was not declared in manifest.' },
+        fullDescription: { text: 'Static analysis observed an agent-bound critical capability path (e.g. EXECUTE, DELETE, SEND) that was not declared in the manifest; this is not runtime execution evidence.' },
         defaultConfiguration: { level: 'error' }
       },
       {

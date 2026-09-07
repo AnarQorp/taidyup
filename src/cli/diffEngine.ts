@@ -13,7 +13,7 @@ export interface AuthorityDiffResult {
 
 export class DiffEngine {
   /**
-   * Compares two ReconciledTrustState artifacts and computes semantic Authority Diff.
+   * Compares two ReconciledTrustState artifacts and computes a structural capability-evidence diff.
    */
   public static computeDiff(baseState: ReconciledTrustState, targetState: ReconciledTrustState): AuthorityDiffResult {
     const baseSubjects = new Set(baseState.reconciledClaims.map(c => c.subject));
@@ -29,13 +29,13 @@ export class DiffEngine {
     const removedCapabilities = Array.from(baseCaps).filter(c => !targetCaps.has(c));
 
     const criticalActions = ['DELETE', 'EXECUTE', 'SEND', 'PUBLISH', 'APPROVE', 'PURCHASE', 'TRANSFER', 'ADMIN'];
-    const criticalExpansions = addedCapabilities.filter(cap => {
-      const parts = cap.split(':');
-      return criticalActions.includes(parts[1]);
-    });
+    const criticalTargetCapabilities = new Set(targetState.reconciledClaims
+      .filter(claim => claim.action && criticalActions.includes(claim.action))
+      .map(claim => `${claim.subject}:${claim.action}:${claim.resource}`));
+    const criticalExpansions = addedCapabilities.filter(capability => criticalTargetCapabilities.has(capability));
 
     const lines: string[] = [];
-    lines.push(`TAIDYUP AUTHORITY DIFF`);
+    lines.push(`TAIDYUP CAPABILITY EVIDENCE DIFF`);
     lines.push(`Base:   ${baseState.timestamp}`);
     lines.push(`Target: ${targetState.timestamp}\n`);
 
@@ -50,12 +50,12 @@ export class DiffEngine {
       removedCapabilities.forEach(c => lines.push(`  - ${c}`));
     }
     if (criticalExpansions.length > 0) {
-      lines.push(`\n🚨 CRITICAL AUTHORITY EXPANSION DETECTED:`);
+      lines.push(`\n⚠️ CRITICAL CAPABILITY EVIDENCE ADDED:`);
       criticalExpansions.forEach(c => lines.push(`  💥 ${c}`));
     }
 
     if (addedCapabilities.length === 0 && removedCapabilities.length === 0 && newAgents.length === 0 && removedAgents.length === 0) {
-      lines.push(`No structural authority changes detected between releases.`);
+      lines.push(`No structural capability evidence changes detected between releases.`);
     }
 
     return {

@@ -10,7 +10,7 @@ export class ReportGenerator {
     lines.push(`# TAIDYUP TECHNICAL PASSPORT & VALIDATION REPORT`);
     lines.push(`**Project:** \`${projectName}\`  `);
     lines.push(`**Timestamp:** \`${state.timestamp}\`  `);
-    lines.push(`**Trust Kernel Engine Version:** \`${state.schemaVersion}\`  \n`);
+    lines.push(`**Report Schema Version:** \`${state.schemaVersion}\`  \n`);
 
     lines.push(`## SUMMARY METRICS`);
     lines.push(`* **Total Claims Evaluated:** ${state.summary.totalClaims}`);
@@ -33,12 +33,11 @@ export class ReportGenerator {
       lines.push(`### ${icon} \`${claim.subject}\` — ${claim.predicate} ${claim.action || ''} ${claim.resource || ''}`);
       lines.push(`* **Status:** \`${claim.status}\``);
       lines.push(`* **Source:** \`${claim.source}\``);
-      lines.push(`* **Confidence:** \`${claim.confidence ? Math.round(claim.confidence * 100) + '%' : 'N/A'}\``);
       if (claim.provenance && claim.provenance.length > 0) {
         lines.push(`* **Provenance:** ${claim.provenance.map(p => `\`${p.artifact}${p.location ? ':' + p.location : ''}\``).join(', ')}`);
       }
       const runtime = claim.runtimeAssessment;
-      if (runtime) {
+      if (runtime && runtime.observationState !== 'NO_OBSERVATION') {
         lines.push(`* **Runtime observation:** \`${runtime.observationState}\``);
         if (runtime.latestOutcome) lines.push(`* **Source-reported outcome:** \`${runtime.latestOutcome}\``);
         lines.push(`* **Observed execution instances:** ${runtime.observedExecutionInstances ?? runtime.observedCount}`);
@@ -47,6 +46,8 @@ export class ReportGenerator {
         lines.push(`* **Runtime coverage:** \`${runtime.completeness}\` (not an exhaustive execution history)`);
         if (runtime.lastObservedAt) lines.push(`* **Last runtime observation:** \`${runtime.lastObservedAt}\``);
         lines.push(`* **Runtime limits:** authorization, safety, compliance, downstream effect and result correctness are not established.`);
+      } else {
+        lines.push(`* **Runtime observation:** \`NO_OBSERVATION\` (no runtime evidence is not evidence of no execution)`);
       }
       lines.push(``);
     }
@@ -65,7 +66,7 @@ export class ReportGenerator {
     lines.push(`## TECHNICAL FINDINGS & CONFLICTS\n`);
 
     if (state.findings.length === 0) {
-      lines.push(`*No critical governance conflicts or undeclared capabilities detected.*`);
+      lines.push(`*No technical findings emitted.*`);
     } else {
       for (const finding of state.findings) {
         const sevIcon = finding.severity === 'CRITICAL' ? '💥' : finding.severity === 'HIGH' ? '🚨' : '⚠️';
