@@ -355,7 +355,7 @@ function CapabilityCard({ claim, result, onOpen }: { claim: Claim; result: Local
   </article>;
 }
 
-export function AnalysisView({ state, onStartTour }: { state: AnalysisUiState; onStartTour?: () => void }) {
+export function AnalysisView({ state, onStartTour, tourStep }: { state: AnalysisUiState; onStartTour?: () => void; tourStep?: number }) {
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null);
   const result = state.status === 'success' ? state.result : null;
@@ -365,6 +365,14 @@ export function AnalysisView({ state, onStartTour }: { state: AnalysisUiState; o
     setSelectedSubject('all');
     setSelectedClaim(null);
   }, [result?.project.targetPath]);
+
+  useEffect(() => {
+    if (tourStep === 4 && (result as any)?.presentation?.bundledDemo === true) {
+      setSelectedClaim(result?.reconciliation.reconciledClaims.find(claim => claim.action === 'SEND' && claim.status === 'SUPPORTED') || null);
+    } else if (tourStep !== undefined) {
+      setSelectedClaim(null);
+    }
+  }, [result, tourStep]);
 
   if (state.status === 'idle') return <section className="workbench-card p-8 text-center shadow-md border border-[#1A1D20]/15" data-ui-state="idle">
     <Search className="mx-auto mb-3 h-10 w-10 text-[#1E50C8] opacity-80" />

@@ -74,7 +74,7 @@ export default function App({ analyzeProject, inspectConnected }: { analyzeProje
               <FolderSearch className="h-5 w-5 text-[#1E50C8]" /> What do you want to analyze?
             </h2>
             <p className="mt-1 text-xs text-[#5C6068]">
-              Select a local project directory to reconcile AST code claims against AST observations.
+              Select a local project directory to reconcile declared capability claims with available local technical evidence.
             </p>
           </div>
           <span className="text-[10px] font-mono font-bold text-[#059669] bg-[#059669]/10 border border-[#059669]/25 px-2.5 py-1 rounded">
@@ -194,7 +194,7 @@ export default function App({ analyzeProject, inspectConnected }: { analyzeProje
                 <Sparkles className="h-4 w-4 text-[#1E50C8]" /> New to tAIdyup?
               </h3>
               <p className="mt-1 text-xs text-[#5C6068]">
-                Try the bundled onboarding demo to learn how tAIdyup separates intended authority, technical code evidence, current connections, and observed execution. Takes about 2 minutes.
+                Try the bundled onboarding demo to learn how tAIdyup separates intended authority, available technical evidence, current connections, and observed execution. Takes about 2 minutes.
               </p>
             </div>
             <button
@@ -211,7 +211,7 @@ export default function App({ analyzeProject, inspectConnected }: { analyzeProje
       </section>
 
       {/* Main Analysis Results View */}
-      <AnalysisView state={displayedState} onStartTour={onboarding.startTour} />
+      <AnalysisView state={displayedState} onStartTour={onboarding.startTour} tourStep={onboarding.tourActive ? onboarding.tourStep : undefined} />
     </main>
 
     {/* Guided Tour Modal Component */}
@@ -223,6 +223,8 @@ export default function App({ analyzeProject, inspectConnected }: { analyzeProje
       onClose={onboarding.stopTour}
       onFinish={() => {
         onboarding.stopTour();
+        setTargetPath('');
+        setRuntimeArtifactPath('');
         document.getElementById('project-path')?.focus();
         document.getElementById('project-path')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }}

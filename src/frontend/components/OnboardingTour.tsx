@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, HelpCircle, Sparkles, FolderSearch } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, FolderSearch } from 'lucide-react';
 
 export interface TourStep {
   anchor: string;
@@ -13,13 +13,13 @@ export const TOUR_STEPS: TourStep[] = [
     anchor: 'project',
     title: '1. Bundled Demo Project',
     badge: 'DEMO PATH',
-    content: 'This is the bundled project tAIdyup has actually analyzed using the normal local scanner path. The results derive from real technical evidence and workflow artifacts, not a static visual mock.'
+    content: 'This is the bundled project tAIdyup has actually analyzed using the normal local analysis path. The results derive from real technical evidence, workflow artifacts, and sanitized runtime evidence—not a static visual mock.'
   },
   {
     anchor: 'layers',
     title: '2. Four Evidence Questions',
     badge: 'MENTAL MODEL',
-    content: 'tAIdyup separates evidence into 4 distinct dimensions: DECLARED (what the developer claims), OBSERVED (technical code evidence), CONNECTED (point-in-time configuration), and RUNTIME (observed execution activity).'
+    content: 'tAIdyup separates four evidence questions: DECLARED is what the developer or owner says the system should be able to do; OBSERVED is available technical evidence; CONNECTED is point-in-time configuration evidence when explicitly collected; RUNTIME is execution activity represented by the available runtime evidence.'
   },
   {
     anchor: 'supported-runtime',
@@ -31,7 +31,7 @@ export const TOUR_STEPS: TourStep[] = [
     anchor: 'interesting-difference',
     title: '4. The Interesting Difference',
     badge: 'EVIDENTIARY VALUE',
-    content: 'Notice WRITE is UNVERIFIED (declared without code evidence) while EXECUTE is an UNDECLARED_OBSERVATION (observed in workflow without declaration). In tAIdyup, UNKNOWN and UNVERIFIED are valuable evidence boundaries, not failures.'
+    content: 'Notice WRITE is UNVERIFIED (declared without sufficient supporting evidence) while EXECUTE is an UNDECLARED_OBSERVATION (observed in workflow without declaration). In tAIdyup, UNKNOWN and UNVERIFIED are valuable evidence boundaries, not failures.'
   },
   {
     anchor: 'why-unknowns',
@@ -43,7 +43,7 @@ export const TOUR_STEPS: TourStep[] = [
     anchor: 'technical-proof',
     title: '6. Technical Proof & Next Action',
     badge: 'PROVENANCE & DEEP PROOF',
-    content: 'Expand Technical Proof to inspect raw evidence, collector details, and line-level provenance. You\'re ready to check your own AI projects!'
+    content: 'Expand the Evidence inspector to inspect evidence records, collector details, and line-level provenance. You\'re ready to check your own AI projects!'
   }
 ];
 
@@ -77,23 +77,33 @@ export function OnboardingTour({
         onNext();
       } else if (event.key === 'ArrowLeft' && stepIndex > 0) {
         onPrev();
+      } else if (event.key === 'Tab' && containerRef.current) {
+        const controls = Array.from(containerRef.current.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')).filter(item => !item.hasAttribute('disabled'));
+        if (!controls.length) return;
+        const first = controls[0]; const last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown);
 
     // Find and scroll to target anchor
-    const targetElement = document.querySelector(`[data-tour-anchor="${currentStep.anchor}"]`);
-    if (targetElement) {
-      targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      targetElement.classList.add('tour-target-highlight');
-    }
+    let targetElement: Element | null = null;
+    const targetTimer = window.setTimeout(() => {
+      targetElement = document.querySelector(`[data-tour-anchor="${currentStep.anchor}"]`);
+      if (targetElement) {
+        targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetElement.classList.add('tour-target-highlight');
+      }
+    }, 0);
 
     // Focus container for keyboard accessibility
     containerRef.current?.focus();
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      window.clearTimeout(targetTimer);
       if (targetElement) {
         targetElement.classList.remove('tour-target-highlight');
       }
@@ -108,7 +118,7 @@ export function OnboardingTour({
       tabIndex={-1}
       role="dialog"
       aria-label={`Guided Tour: ${currentStep.title}`}
-      className="fixed bottom-6 right-6 z-50 w-full max-w-md rounded-xl border border-[#1E50C8]/40 bg-[#F6F3EC] p-5 shadow-2xl backdrop-blur-md outline-none transition-all sm:bottom-8 sm:right-8"
+      className="fixed bottom-3 left-3 right-3 z-50 w-auto max-w-md rounded-xl border border-[#1E50C8]/40 bg-[#F6F3EC] p-5 shadow-2xl backdrop-blur-md outline-none transition-all sm:bottom-8 sm:left-auto sm:right-8 sm:w-full"
       data-tour-step={stepIndex + 1}
     >
       <div className="h-1 wood-header-strip absolute top-0 left-0 right-0 rounded-t-xl" />

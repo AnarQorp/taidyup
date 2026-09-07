@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { selectDirectory, analyzeBundledDemo, LocalAnalysisRequestError } from '../adapters/localAnalysisAdapter.js';
+import { selectDirectory, analyzeBundledDemo } from '../adapters/localAnalysisAdapter.js';
 import type { DirectoryPickerResult } from '../../local-ui/folderPicker.js';
 import type { BundledDemoAnalysis } from '../../application/analyzeBundledDemo.js';
 
@@ -73,11 +73,6 @@ export function useOnboarding(
     setTourStep(prev => (prev > 0 ? prev - 1 : prev));
   }
 
-  function replayTour() {
-    setTourStep(0);
-    setTourActive(true);
-  }
-
   return {
     pickerState,
     handleChooseFolder,
@@ -89,7 +84,6 @@ export function useOnboarding(
     stopTour,
     nextStep,
     prevStep,
-    replayTour,
     setTourStep
   };
 }
