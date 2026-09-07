@@ -22,7 +22,7 @@
 
 An AI system can span source code, agents, tools, workflows, models, memory, MCP servers, and external configuration. Its apparent authority can change while the project still looks like the same application.
 
-tAIdyup helps you explore that system as an evidence-backed map:
+tAIdyup builds an evidence-backed map of what authority your AI appears to have—and shows exactly what supports that conclusion, what changed, what execution activity was observed, and what remains unknown:
 
 - which subject or agent is involved;
 - which capability is declared or observed;
@@ -37,7 +37,7 @@ It does not turn configuration or runtime activity into certainty. It preserves 
 
 Use the **graphical interface** to explore your AI: move from subjects and capabilities into reconciliation states, evidence, provenance, and **Why?** Use the **CLI and machine-readable outputs** to integrate tAIdyup into development workflows, automate analysis, generate evidence artifacts, compare reports, and inspect supported current n8n configuration.
 
-For local analysis, the graphical interface and CLI share the same reconciliation semantics and Trust Kernel. The graphical interface covers declarations and local static evidence and can explicitly inspect one supported n8n CONNECTED source. Report diff, SARIF, and the Technical Passport remain CLI-only.
+For local analysis, the graphical interface and CLI share the same reconciliation semantics and Trust Kernel. The current Git-main graphical interface keeps DECLARED, OBSERVED, CONNECTED, and RUNTIME evidence distinct, and can explicitly inspect one supported n8n CONNECTED source or import a sanitized local RUNTIME artifact. Report diff, SARIF, and the Technical Passport remain CLI-only.
 
 Run the current repository UI:
 
@@ -49,7 +49,9 @@ npm run ui
 
 Then open `http://127.0.0.1:3001` and enter the absolute path of an existing local project containing `taidyup.json`.
 
-<!-- SCREENSHOT_RECOMMENDED_AFTER_UI_POLISH: add a redacted, path-neutral capture of the real local UI when a reproducible public demo fixture is available. -->
+![The Woodcraft Workbench showing a real local analysis of the repository's synthetic CONNECTED demo project](docs/assets/screenshots/taidyup-woodcraft-workbench.png)
+
+_The current Git-main Woodcraft Workbench analyzing the repository's local synthetic demo fixture. `SUPPORTED` is an evidence-reconciliation state, not a claim of authorization, safety, or compliance._
 
 ## Check apparent authority dimension by dimension
 
@@ -96,6 +98,10 @@ The boundaries matter:
 - `SAME_WORKFLOW != AGENT_AUTHORITY`
 - `STATIC_CONFIGURATION != RUNTIME_RESOURCE`
 - `CONNECTED_AT_T != CURRENT_FOREVER`
+- `RUNTIME_OBSERVED != UNIVERSALLY_EXECUTED`
+- `NO_RUNTIME_EVIDENCE != NOT_EXECUTED`
+- `EXECUTION_ATTEMPTED != EXECUTION_SUCCEEDED`
+- `TOOL_SUCCEEDED != RESULT_CORRECT`
 
 tAIdyup requires evidence for subject, capability, and resource relationships. Similar names or coexistence in a repository or workflow are not treated as identity or authority bindings.
 
@@ -132,16 +138,16 @@ Requires Node.js 18+.
 
 ### Published npm alpha
 
-The published `taidyup@0.1.0-alpha.2` provides the current CLI commands: `init`, `scan`, `validate`, `report`, `diff`, and explicit `connected-n8n` inspection.
+The published `taidyup@0.1.0-alpha.2` provides DECLARED, OBSERVED, and CONNECTED analysis through the current CLI commands: `init`, `scan`, `validate`, `report`, `diff`, and explicit `connected-n8n` inspection.
 
-RUNTIME V0 exists on unreleased Git `main`; it is not part of the published npm Alpha 2 package. The CLI version intentionally remains `0.1.0-alpha.2` until a separately approved release.
+Current unreleased Git `main` additionally contains RUNTIME V0, the OpenTelemetry composition validation lab, four-layer product stabilization, and the Woodcraft Workbench. Those additions are not part of the published npm Alpha 2 package. The CLI version intentionally remains `0.1.0-alpha.2` until a separately approved release.
 
 ```bash
 npm install -g taidyup@alpha
 npx taidyup@alpha --help
 ```
 
-The npm-installed Alpha 2 runtime is CLI-only. To use the graphical interface and its local bridge, use the current repository checkout:
+The npm-installed Alpha 2 package is CLI-only. To use the graphical interface and its local bridge, use the current repository checkout:
 
 ```bash
 git clone https://github.com/AnarQorp/taidyup.git
