@@ -95,7 +95,7 @@ export default function App({ analyzeProject, inspectConnected }: { analyzeProje
             <button
               type="button"
               onClick={() => setShowAdvancedInputs(!showAdvancedInputs)}
-              className="text-xs font-semibold text-[#1E50C8] hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-xs font-semibold text-[#1E50C8] hover:underline flex items-center gap-1.5 cursor-pointer py-2 px-3 rounded hover:bg-[#1E50C8]/10 transition-colors"
             >
               {showAdvancedInputs ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
               {showAdvancedInputs ? 'Hide optional RUNTIME & CONNECTED inputs' : 'Add optional RUNTIME & CONNECTED inputs (Progressive Disclosure)'}
