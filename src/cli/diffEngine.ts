@@ -34,9 +34,11 @@ export class DiffEngine {
       .filter(claim => claim.action && criticalActions.includes(claim.action))
       .map(claim => `${claim.subject}:${claim.action}:${claim.resource}`));
     const criticalExpansions = addedCapabilities.filter(capability => criticalTargetCapabilities.has(capability));
-    const baseDeclaration = baseState.declarationContext?.status ?? 'PRESENT';
-    const targetDeclaration = targetState.declarationContext?.status ?? 'PRESENT';
-    const declarationContextChange = baseDeclaration === targetDeclaration ? undefined : { from: baseDeclaration, to: targetDeclaration };
+    const baseDeclaration = baseState.declarationContext?.status;
+    const targetDeclaration = targetState.declarationContext?.status;
+    const declarationContextChange = baseDeclaration && targetDeclaration && baseDeclaration !== targetDeclaration
+      ? { from: baseDeclaration, to: targetDeclaration }
+      : undefined;
 
     const lines: string[] = [];
     lines.push(`TAIDYUP CAPABILITY EVIDENCE DIFF`);

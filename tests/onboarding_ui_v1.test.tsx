@@ -104,6 +104,11 @@ async function runTests() {
   assert.match(demoViewHtml, /data-capability-action="SEND"/, '20. SEND capability card must exist');
   assert.match(demoViewHtml, /data-capability-action="WRITE"/, '20. WRITE capability card must exist');
   assert.match(demoViewHtml, /data-capability-action="EXECUTE"/, '20. EXECUTE capability card must exist');
+  assert.doesNotMatch(JSON.stringify(demoResult.evidence), /bundledDemo/, 'Demo presentation metadata must remain outside evidence');
+  assert.match(demoViewHtml, /data-epistemic-state="SUPPORTED"/, 'Demo SUPPORTED state must remain visible');
+  assert.match(demoViewHtml, /data-epistemic-state="UNVERIFIED"/, 'Demo UNVERIFIED state must remain visible');
+  assert.match(demoViewHtml, /data-epistemic-state="UNDECLARED_OBSERVATION"/, 'Demo undeclared observation must remain visible');
+  assert.match(demoViewHtml, /Not inspected/, 'CONNECTED must remain explicitly uninspected');
 
   // 21. Evidence Labels Updated
   assert.match(demoViewHtml, /Source and workflow evidence/, '21. Evidence label "Source and workflow evidence" must replace static AST');
@@ -116,12 +121,25 @@ async function runTests() {
   assert.equal(TOUR_STEPS[0].anchor, 'project', 'Step 1 anchor must be project');
   assert.equal(TOUR_STEPS[1].anchor, 'layers', 'Step 2 anchor must be layers');
   assert.equal(TOUR_STEPS[2].anchor, 'supported-runtime', 'Step 3 anchor must be supported-runtime');
+  assert.equal(TOUR_STEPS[3].anchor, 'interesting-difference', 'Step 4 anchor must be interesting-difference');
+  assert.equal(TOUR_STEPS[4].anchor, 'why-unknowns', 'Step 5 anchor must be why-unknowns');
+  assert.equal(TOUR_STEPS[5].anchor, 'technical-proof', 'Step 6 anchor must be technical-proof');
 
   const tourStep1 = renderToStaticMarkup(
     <OnboardingTour active={true} stepIndex={0} onNext={() => {}} onPrev={() => {}} onClose={() => {}} onFinish={() => {}} />
   );
   assert.match(tourStep1, /Step 1 of 6/, '22. Step indicator must render Step 1 of 6');
+  assert.match(tourStep1, /Skip tour/, 'Tour must remain skippable');
   assert.match(tourStep1, /min-h-\[44px\]/, '22. Tour buttons must satisfy 44px touch target ergonomics');
+
+  const tourStep6 = renderToStaticMarkup(
+    <OnboardingTour active={true} stepIndex={5} onNext={() => {}} onPrev={() => {}} onClose={() => {}} onFinish={() => {}} />
+  );
+  assert.match(tourStep6, /Step 6 of 6/, 'Final tour step must remain available');
+  assert.match(tourStep6, /Analyze your own project/, 'Final tour action must remain available');
+  const evidenceBeforeTour = JSON.stringify(demoResult.evidence);
+  renderToStaticMarkup(<OnboardingTour active={true} stepIndex={2} onNext={() => {}} onPrev={() => {}} onClose={() => {}} onFinish={() => {}} />);
+  assert.equal(JSON.stringify(demoResult.evidence), evidenceBeforeTour, 'Rendering the tour must not mutate evidence');
 
   // 23. Forbidden Copy Guardrails Audit Across All Rendered Surfaces
   const fullMarkup = initialHtml + manifestlessHtml + emptyHtml + errorHtml + demoViewHtml + tourStep1;

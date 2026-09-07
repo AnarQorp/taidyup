@@ -76,9 +76,9 @@ export class SarifExporter {
               rules
             }
           },
-          properties: {
-            declarationContext: state.declarationContext ?? { status: 'PRESENT', path: null }
-          },
+          ...(state.declarationContext
+            ? { properties: { declarationContext: state.declarationContext } }
+            : {}),
           results
         }
       ]

@@ -68,6 +68,11 @@ async function main() {
     const present = { ...empty.reconciliation, declarationContext: { status: 'PRESENT' as const, path: '/tmp/taidyup.json' } };
     const diff = DiffEngine.computeDiff(empty.reconciliation, present);
     assert.deepEqual(diff.declarationContextChange, { from: 'ABSENT', to: 'PRESENT' });
+
+    const legacy = { ...empty.reconciliation, declarationContext: undefined };
+    assert.equal(DiffEngine.computeDiff(legacy, present).declarationContextChange, undefined);
+    const legacySarif = SarifExporter.exportToSarif('legacy-project', legacy);
+    assert.equal('properties' in legacySarif.runs[0], false);
     assert.match(diff.summaryText, /DECLARATION CONTEXT.*ABSENT -> PRESENT/);
     assert.doesNotMatch(diff.summaryText, /authority change/i);
 

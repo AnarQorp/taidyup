@@ -11,12 +11,6 @@ export interface FolderPickerUiState {
 
 export type DemoCtaState = 'IDLE' | 'LOADING' | 'LOADED' | 'TOUR_ACTIVE' | 'COMPLETED';
 
-export interface FolderPickerUiState {
-  status: 'idle' | 'selecting' | 'SELECTED' | 'CANCELLED' | 'PICKER_UNAVAILABLE' | 'PICKER_FAILED';
-  path?: string;
-  message?: string;
-}
-
 export function useOnboarding(
   onPathSelected: (path: string) => void,
   onDemoLoaded: (result: BundledDemoAnalysis) => void,

@@ -5,7 +5,9 @@ The Phase 1 UI is a visual client of the same application use case used by the C
 ```text
 local project
   -> analyzeLocalProject
-     -> ManifestParser
+     -> detect declaration manifest
+        -> present: ManifestParser
+        -> absent: empty declaration claims/evidence
      -> ScannerCore
      -> ScannerAdapter
      -> ReconciliationEngine
