@@ -45,7 +45,7 @@ export async function analyzeConnectedLocalProject(input: {
     ...local,
     subjects: Array.from(new Set(connected.reconciliation.reconciledClaims.map(claim => claim.subject))),
     evidence,
-    reconciliation: connected.reconciliation,
+    reconciliation: { ...connected.reconciliation, declarationContext: local.reconciliation.declarationContext },
     connected: {
       snapshot: connected.snapshot,
       disclosure: connected.disclosure,

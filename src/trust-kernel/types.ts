@@ -238,4 +238,9 @@ export interface ReconciledTrustState {
   reconciledClaims: Claim[];
   findings: TechnicalFinding[];
   unboundRuntimeObservations?: Evidence[];
+  /** Project-level declaration-source context; this does not alter capability epistemic states. */
+  declarationContext?: {
+    status: 'PRESENT' | 'ABSENT';
+    path: string | null;
+  };
 }
