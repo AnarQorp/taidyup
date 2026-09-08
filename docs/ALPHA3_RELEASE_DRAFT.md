@@ -1,13 +1,13 @@
-# tAIdyup 0.1.0-alpha.3 — Release Draft
+# tAIdyup 0.1.0-alpha.3 — Release Notes
 
-Status: **release candidate; unpublished**
+Status: **published Alpha release**
 
-- Proposed tag: `v0.1.0-alpha.3`
-- Proposed title: `tAIdyup 0.1.0-alpha.3`
+- Tag: `v0.1.0-alpha.3`
+- Title: `tAIdyup 0.1.0-alpha.3`
 
-## Proposed release notes
+## Release notes
 
-Alpha 3 consolidates the product already integrated on Git main into a coherent release candidate.
+Alpha 3 consolidates the product integrated on Git main into a coherent published Alpha release.
 
 ### Highlights
 
@@ -33,5 +33,3 @@ Alpha 3 consolidates the product already integrated on Git main into a coherent 
 - Description: `Local-first evidence analysis for AI projects — know your AI while you build it.`
 - Website: `https://www.npmjs.com/package/taidyup`
 - Topics: `ai`, `ai-agents`, `developer-tools`, `local-first`, `sarif`, `security`, `governance`, `typescript`
-
-Do not create the tag or GitHub Release until a separate publication GO.

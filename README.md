@@ -136,12 +136,12 @@ Report diff is separate: `taidyup diff` compares two saved results. Neither a fa
 
 Requires Node.js 18+.
 
-### npm Alpha 3 release candidate — CLI only
+### Published npm Alpha 3 — CLI only
 
-Version `0.1.0-alpha.3` is currently a release candidate, not yet a published release. Its npm artifact is intentionally CLI-only: `init`, `scan`, `validate`, `report`, `diff`, explicit `connected-n8n`, and explicit `runtime-import`. It does not contain or launch the Woodcraft Workbench.
+The published `taidyup@0.1.0-alpha.3` npm artifact is intentionally CLI-only: `init`, `scan`, `validate`, `report`, `diff`, explicit `connected-n8n`, and explicit `runtime-import`. It does not contain or launch the Woodcraft Workbench.
 
 ```bash
-npm install -g taidyup@alpha # installs the currently published alpha dist-tag
+npm install -g taidyup@alpha
 taidyup --help
 ```
 
