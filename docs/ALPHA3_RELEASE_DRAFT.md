@@ -1,13 +1,13 @@
-# tAIdyup 0.1.0-alpha.3 — Release Notes
+# tAIdyup 0.1.0-alpha.3 — Release Draft
 
-Status: **published Alpha release**
+Status: **release candidate; unpublished**
 
-- Tag: `v0.1.0-alpha.3`
-- Title: `tAIdyup 0.1.0-alpha.3`
+- Proposed tag: `v0.1.0-alpha.3`
+- Proposed title: `tAIdyup 0.1.0-alpha.3`
 
-## Release notes
+## Proposed release notes
 
-Alpha 3 consolidates the product integrated on Git main into a coherent published Alpha release.
+Alpha 3 consolidates the product integrated on Git main into a coherent release candidate awaiting publication.
 
 ### Highlights
 

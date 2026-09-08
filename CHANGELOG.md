@@ -2,9 +2,7 @@
 
 All notable changes to tAIdyup will be documented in this file.
 
-## [0.1.0-alpha.3] - 2026-09-08
-
-Published Alpha release. This is not Beta or stable software.
+## [0.1.0-alpha.3] - Release candidate (unpublished)
 
 ### Product and evidence model
 - Added explicit local RUNTIME V0 evidence import while keeping runtime observation orthogonal to authority.
