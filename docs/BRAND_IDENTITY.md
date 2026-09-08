@@ -28,9 +28,9 @@
 
 1. **Developer Tool for AI Projects:** Used during active AI development.
 2. **Understand While Building:** Enables developers to know what their AI system is becoming while coding.
-3. **Observe, Contrast & Reconcile:** Reconciles declared intent against AST code evidence.
+3. **Observe, Contrast & Reconcile:** Keeps optional declared intent, local observations, explicit connected state, and explicit runtime evidence distinct while reconciling compatible dimensions.
 4. **Provenance & Evidence Generation:** Exports audit-ready technical passports, JSON reports, and SARIF static analysis output.
-5. **Delivery, Governance & Compliance Workflows:** Supports PR code reviews, client handoffs, and regulatory compliance disclosures as natural downstream outcomes.
+5. **Delivery & Review Workflows:** Supports development review and evidence-based technical handoffs without certifying authorization, safety, or compliance.
 
 ---
 
@@ -41,14 +41,14 @@ Like Pinocchio, your AI begins as something you create with intention. As it dev
 ### The Canonical Progression
 1. **CREATE (CREAS):** Your idea and your intention.
 2. **DEVELOP (DESARROLLAS):** Shaping and building the AI system.
-3. **DISCOVER (CONTRASTAS):** tAIdyup contrasts expectation/declaration with observable AST code evidence.
+3. **DISCOVER (CONTRASTAS):** tAIdyup contrasts optional declarations with supported OBSERVED, explicit CONNECTED, and explicit RUNTIME evidence.
 4. **UNDERSTAND (CONOCES):** Deep evidence-backed knowledge of what you built, where alignment exists, and where attention is needed.
 
 ---
 
 ## 📏 The Nose as a Metaphor for Distance (Not Dishonesty)
 
-- **Distance (Observable Gap):** When there is distance between what is declared/expected and what technical code evidence shows, that distance becomes visible. The nose represents that **observable gap**, never dishonesty, deception, or an accusation.
+- **Distance (Observable Gap):** When there is distance between declared/expected intent and compatible technical evidence, that distance becomes visible. The nose represents that **observable gap**, never dishonesty, deception, or an accusation. A missing declaration is `ABSENT`, not a failure and not inferred intent.
 - **Alignment:** When declaration, expectation, and technical evidence correspond, the distance disappears. The result is not "the developer was telling the truth", but rather: **the developer has better evidence-backed knowledge of what they built**.
 
 ---

@@ -1,27 +1,39 @@
 {
   "name": "taidyup",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "license": "Apache-2.0",
-  "description": "Evidence-Backed Technical Governance for AI Builders",
-  "main": "dist/cli/cliCore.js",
+  "description": "Local-first evidence analysis for AI projects",
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AnarQorp/taidyup.git"
+  },
+  "homepage": "https://github.com/AnarQorp/taidyup#readme",
+  "bugs": {
+    "url": "https://github.com/AnarQorp/taidyup/issues"
+  },
   "bin": {
     "taidyup": "./bin/taidyup.js"
   },
   "files": [
-    "bin",
-    "dist",
+    "bin/taidyup.js",
+    "dist/cli.cjs",
     "TAIDYUP_MANIFEST_V0_SCHEMA.json",
     "LICENSE",
     "README.md"
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && npx esbuild src/cli/cliCore.ts --bundle --platform=node --target=node18 --outfile=dist/cli.cjs --format=cjs",
+    "build": "tsc && vite build && npm run build:cli",
+    "build:cli": "esbuild src/cli/cliCore.ts --bundle --platform=node --target=node18 --outfile=dist/cli.cjs --format=cjs",
+    "prepack": "npm run build:cli",
     "start": "tsx src/local-ui/server.ts",
     "ui": "tsx src/local-ui/server.ts",
     "server": "tsx src/backend/server.ts",
     "taidyup": "node bin/taidyup.js",
-    "test": "npx tsx tests/manifestless_v1_1_core.test.ts && npx tsx tests/onboarding_bridge_v1.test.ts && npx tsx tests/onboarding_ui_v1.test.tsx && npx tsx tests/runtime_evidence_v0.test.ts && npx tsx tests/runtime_reconciliation_v0.test.ts && npx tsx tests/four_layer_product_stabilization.test.tsx && npx tsx tests/trust_kernel_adversarial_suite.test.ts && npx tsx tests/dimensional_reconciliation_binding_red.test.ts && npx tsx tests/connected_evidence_layer_red.test.ts && npx tsx tests/connected_n8n_transport_red.test.ts && npx tsx tests/connected_n8n_e2e.test.ts && npx tsx tests/connected_cli_opt_in.test.ts && npx tsx tests/developer_fixtures_runner.ts && npx tsx tests/scanner_evidence_hygiene.test.ts && npx tsx tests/scanner_structural_agent_red.test.ts && npx tsx tests/workflow_evidence_v0.test.ts && npx tsx tests/init_accept_hardening.test.ts && npx tsx tests/cli_target_validation.test.ts && npx tsx tests/application_contract.test.ts && npx tsx tests/local_ui_bridge.test.ts && npx tsx tests/ui_vertical.test.tsx && npx tsx tests/ui_connected_slice.test.tsx && npx tsx tests/local_first_boundary.test.ts",
+    "test": "npx tsx tests/cli_version_contract.test.ts && npx tsx tests/manifestless_v1_1_core.test.ts && npx tsx tests/onboarding_bridge_v1.test.ts && npx tsx tests/onboarding_ui_v1.test.tsx && npx tsx tests/runtime_evidence_v0.test.ts && npx tsx tests/runtime_reconciliation_v0.test.ts && npx tsx tests/four_layer_product_stabilization.test.tsx && npx tsx tests/trust_kernel_adversarial_suite.test.ts && npx tsx tests/dimensional_reconciliation_binding_red.test.ts && npx tsx tests/connected_evidence_layer_red.test.ts && npx tsx tests/connected_n8n_transport_red.test.ts && npx tsx tests/connected_n8n_e2e.test.ts && npx tsx tests/connected_cli_opt_in.test.ts && npx tsx tests/developer_fixtures_runner.ts && npx tsx tests/scanner_evidence_hygiene.test.ts && npx tsx tests/scanner_structural_agent_red.test.ts && npx tsx tests/workflow_evidence_v0.test.ts && npx tsx tests/init_accept_hardening.test.ts && npx tsx tests/cli_target_validation.test.ts && npx tsx tests/application_contract.test.ts && npx tsx tests/local_ui_bridge.test.ts && npx tsx tests/ui_vertical.test.tsx && npx tsx tests/ui_connected_slice.test.tsx && npx tsx tests/local_first_boundary.test.ts",
     "test:ui": "npx tsx tests/onboarding_ui_v1.test.tsx && npx tsx tests/application_contract.test.ts && npx tsx tests/local_ui_bridge.test.ts && npx tsx tests/ui_vertical.test.tsx && npx tsx tests/ui_connected_slice.test.tsx && npx tsx tests/local_first_boundary.test.ts"
   },
   "dependencies": {},
@@ -36,6 +48,7 @@
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
     "cors": "^2.8.5",
+    "esbuild": "^0.28.0",
     "express": "^4.19.2",
     "lucide-react": "^0.395.0",
     "postcss": "^8.4.38",
@@ -46,6 +59,10 @@
     "tailwindcss": "^3.4.4",
     "tsx": "^4.15.7",
     "typescript": "^5.4.5",
-    "vite": "^5.3.1"
+    "vite": "^6.4.3"
+  },
+  "overrides": {
+    "qs": "^6.16.0",
+    "tar": "^7.5.21"
   }
 }

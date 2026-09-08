@@ -5,16 +5,23 @@ tAIdyup enforces strict mathematical and logical boundaries on claim states:
 
 $$\text{DECLARED} \neq \text{VERIFIED}$$
 $$\text{OBSERVED} \neq \text{AUTHORIZED}$$
+$$\text{CONNECTED} \neq \text{AUTHORIZED}$$
 $$\text{IMPLEMENTED} \neq \text{ENABLED}$$
 $$\text{ENABLED} \neq \text{EXECUTED}$$
 $$\text{EXECUTED} \neq \text{AUTHORIZED}$$
 $$\text{AUTHORIZED} \neq \text{COMPLIANT}$$
 $$\text{NOT\_OBSERVED} \neq \text{FALSE}$$
 $$\text{UNKNOWN} \neq \text{COMPLIANT}$$
+$$\text{UNKNOWN} \neq \text{FAILURE}$$
 
-## Evidence layers
+## Four evidence dimensions
 
-`STATIC` is the implementation name for local `OBSERVED` evidence from source code or supported workflow artifacts. `CONNECTED` is provider-neutral, point-in-time evidence reported by an explicitly queried external source. Neither layer establishes authorization, execution, safety, or compliance, and the layer itself is not a confidence score.
+- **`DECLARED`**: optional owner-reviewed intent from a supported JSON declaration. When no declaration is supplied, `declarationContext` is `ABSENT`; tAIdyup does not infer intended authority.
+- **`OBSERVED`**: supported local source-code and workflow-artifact evidence. `STATIC` is the internal evidence-layer name used for this dimension.
+- **`CONNECTED`**: explicit opt-in, provider-neutral, point-in-time current-configuration evidence.
+- **`RUNTIME`**: explicit sanitized local lifecycle evidence. It remains orthogonal to authority reconciliation and does not prove a complete execution history.
+
+No dimension establishes authorization, safety, compliance, or universal truth, and a dimension is not a confidence score.
 
 CONNECTED reconciliation uses explicit snapshot semantics:
 
@@ -31,9 +38,11 @@ A current complete absence changes a previously supported positive declaration t
 
 ## State Definitions
 * **`DECLARED`:** Claim originates from a developer declaration manifest.
-* **`OBSERVED`:** Claim originates from static code analysis or AST signals.
+* **`OBSERVED`:** Claim originates from supported local source or workflow evidence.
+* **`CONNECTED`:** Evidence originates from an explicitly requested point-in-time provider inspection.
+* **`RUNTIME`:** Evidence originates from an explicitly imported sanitized lifecycle artifact; it never boosts authority state.
 * **`SUPPORTED`:** Every mandatory declaration dimension is matched by sufficient compatible STATIC and/or CONNECTED evidence under the current Trust Kernel rules. RUNTIME remains orthogonal and does not boost authority.
 * **`UNVERIFIED`:** One or more mandatory declaration dimensions lack sufficient compatible evidence.
 * **`CONFLICT`:** Manifest declared prohibition/absence contradicts active agent binding in code.
-* **`UNDECLARED`:** Code analysis observed an active agent-bound capability not listed in manifest.
+* **`UNDECLARED_OBSERVATION`:** Compatible agent-bound evidence supports a capability not covered by a supplied declaration. If declarations are absent, this is neutral observation context rather than an accusation.
 * **`UNKNOWN`:** Evidence is ambiguous or insufficient.

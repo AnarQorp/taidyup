@@ -1,4 +1,5 @@
 import { ReconciledTrustState } from '../trust-kernel/types.js';
+import packageMetadata from '../../package.json';
 
 export class SarifExporter {
   /**
@@ -9,8 +10,8 @@ export class SarifExporter {
       {
         id: 'TA001',
         name: 'DeclarationConflict',
-        shortDescription: { text: 'Manifest declaration contradicts observed code binding' },
-        fullDescription: { text: 'The developer manifest declared a prohibition or missing capability that static analysis contradicted with an agent-bound capability path in source code.' },
+        shortDescription: { text: 'Owner declaration contradicts compatible technical evidence' },
+        fullDescription: { text: 'An owner declaration contradicts compatible agent-bound technical evidence. This finding does not establish authorization, execution, safety, or compliance.' },
         defaultConfiguration: { level: 'error' }
       },
       {
@@ -23,15 +24,15 @@ export class SarifExporter {
       {
         id: 'TA003',
         name: 'UnverifiedCriticalClaim',
-        shortDescription: { text: 'Declared critical capability lacks code evidence' },
-        fullDescription: { text: 'A critical capability declared in manifest could not be supported by observable AGENT_BOUND code evidence.' },
+        shortDescription: { text: 'Declared critical capability lacks sufficient technical evidence' },
+        fullDescription: { text: 'A critical capability in an owner declaration could not be supported by compatible agent-bound evidence in the available inspection.' },
         defaultConfiguration: { level: 'warning' }
       },
       {
         id: 'TA004',
         name: 'MissingOversightEvidence',
-        shortDescription: { text: 'Human oversight declared but not observed in code' },
-        fullDescription: { text: 'The manifest declared human approval requirement for an action, but static analysis could not observe human oversight implementation in code.' },
+        shortDescription: { text: 'Declared human oversight lacks compatible technical evidence' },
+        fullDescription: { text: 'An owner declaration requires human approval, but the available compatible evidence does not establish that constraint for the same capability path.' },
         defaultConfiguration: { level: 'warning' }
       }
     ];
@@ -71,7 +72,7 @@ export class SarifExporter {
           tool: {
             driver: {
               name: 'tAIdyup',
-              version: '0.1.0-alpha.2',
+              version: packageMetadata.version,
               informationUri: 'https://github.com/AnarQorp/taidyup',
               rules
             }

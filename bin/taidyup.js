@@ -4,7 +4,11 @@ const { CliCore } = require('../dist/cli.cjs');
 
 async function main() {
   const args = process.argv.slice(2);
-  const command = args[0] || 'help';
+  const command = args[0] === '--version' || args[0] === '-v'
+    ? 'version'
+    : args[0] === '--help' || args[0] === '-h'
+      ? 'help'
+      : args[0] || 'help';
 
   let targetPath = '.';
   let strict = false;

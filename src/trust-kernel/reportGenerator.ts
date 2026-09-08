@@ -24,7 +24,7 @@ export class ReportGenerator {
     lines.push(`* **Declaration Conflicts:** ${state.summary.conflictCount}`);
     lines.push(`* **Undeclared Observations:** ${state.summary.undeclaredCount}`);
     lines.push(`* **Unknown / Ambiguous States:** ${state.summary.unknownCount}`);
-    lines.push(`* **Critical Governance Findings:** ${state.summary.criticalFindingsCount}\n`);
+    lines.push(`* **Critical Technical Findings:** ${state.summary.criticalFindingsCount}\n`);
 
     lines.push(`---`);
     lines.push(`## RECONCILED CLAIMS DETAIL\n`);

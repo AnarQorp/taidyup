@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Report a technical error or unexpected crash in tAIdyup CLI
+about: Report an error in the npm CLI or repository Woodcraft Workbench
 title: '[BUG] '
 labels: 'bug'
 assignees: ''
@@ -9,13 +9,14 @@ assignees: ''
 > ⚠️ **SECURITY REMINDER:** Do NOT paste secrets, API keys, credentials, proprietary source code, or sensitive client data into public issues.
 
 ### Environment Details
+- **Surface:** npm CLI / repository local UI
 - **tAIdyup Version:** `taidyup --version`
 - **Node.js Version:** `node --version`
 - **Operating System:** (e.g., Linux Ubuntu 24.04, macOS Sonoma, Windows 11)
 
 ### Command Executed
 ```bash
-# Exact CLI command run (e.g. taidyup validate .)
+# Exact CLI command, or repository UI start command and local route
 ```
 
 ### Expected Behavior
