@@ -3,7 +3,7 @@
 ## Overview
 The **tAIdyup Technical Passport** (`TECHNICAL_PASSPORT.md`) is a portable, human-readable delivery document created by an AI developer for their client or technical auditor.
 
-It summarizes the declared architecture, observable technical evidence, supported capability bindings, unverified claims, and critical governance findings.
+It summarizes optional declared intent, OBSERVED/CONNECTED evidence, orthogonal RUNTIME observations, supported capability bindings, unverified claims, and technical findings. It does not certify authorization, safety, security, or compliance.
 
 ---
 
@@ -15,6 +15,7 @@ It summarizes the declared architecture, observable technical evidence, supporte
 **Project:** `customer-support-agent`
 **Timestamp:** `2026-08-15T19:40:00Z`
 **Trust Kernel Version:** `1.0.0`
+**Declaration source:** `PRESENT` or `ABSENT`
 
 ## SUMMARY METRICS
 * Total Claims Evaluated: 12
@@ -22,7 +23,7 @@ It summarizes the declared architecture, observable technical evidence, supporte
 * Unverified Claims: 2
 * Declaration Conflicts: 0
 * Undeclared Observations: 1
-* Critical Governance Findings: 1
+* Critical Technical Findings: 1
 
 ## RECONCILED CLAIMS DETAIL
 
@@ -37,7 +38,7 @@ The report identifies the Trust Kernel **schema version**. This is not the npm p
 
 ## TECHNICAL FINDINGS & CONFLICTS
 ### 💥 [CRITICAL] Undeclared Critical Capability: EXECUTE
-Static scanner observed agent-bound critical capability EXECUTE on resource "system:bash" that was NOT declared in taidyup.json.
+Compatible local evidence supports agent-bound EXECUTE on resource "system:bash" without a compatible owner declaration. This does not establish execution or authorization.
 ```
 
 ---
@@ -49,3 +50,5 @@ The Technical Passport must never contain:
 - Prohibited term: `100% SECURE`
 - Prohibited term: `IMMUTABLE EVIDENCE`
 - Prohibited term: `ZERO KNOWLEDGE`
+
+`DECLARED != VERIFIED`, `OBSERVED != AUTHORIZED`, `EXECUTED != AUTHORIZED`, `AUTHORIZED != COMPLIANT`, and `UNKNOWN != FAILURE` apply to every Passport.

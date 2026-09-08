@@ -10,9 +10,9 @@ export interface ParsedManifestResult {
 
 export class ManifestParser {
   /**
-   * Parses and validates a tAIdyup Declaration Manifest V0 (JSON or YAML object).
+   * Parses and validates an already-decoded tAIdyup Declaration Manifest V0 object.
    */
-  public static parseManifest(manifestData: any, artifactPath = 'taidyup.yaml'): ParsedManifestResult {
+  public static parseManifest(manifestData: any, artifactPath = 'taidyup.json'): ParsedManifestResult {
     const errors: string[] = [];
     const claims: Claim[] = [];
     const evidences: Evidence[] = [];

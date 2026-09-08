@@ -12,6 +12,7 @@ import {
 } from '../application/analyzeLocalProject.js';
 import { analyzeConnectedN8nWorkflow } from '../application/analyzeConnectedN8nWorkflow.js';
 import { RuntimeArtifactError } from '../runtime/runtimeEvidence.js';
+import packageMetadata from '../../package.json';
 
 export interface CliOptions {
   command: string;
@@ -35,7 +36,7 @@ export interface CliOptions {
 }
 
 export class CliCore {
-  public static VERSION = '0.1.0-alpha.2';
+  public static VERSION = packageMetadata.version;
 
   public static async execute(options: CliOptions): Promise<number> {
     try {
@@ -182,8 +183,6 @@ export class CliCore {
 
   private static async handleScan(options: CliOptions): Promise<number> {
     const targetDir = path.resolve(options.targetPath);
-    console.log(`🔍 Running local tAIdyup AST scan on \`${targetDir}\`...`);
-
     const scanRes = await ScannerCore.scanRepository(targetDir);
 
     if (options.json) {
@@ -197,8 +196,10 @@ export class CliCore {
       return 0;
     }
 
+    console.log(`🔍 Running local tAIdyup evidence scan on \`${targetDir}\`...`);
+
     console.log(`\n================================================================================`);
-    console.log(`OBSERVED AI ESTATE (AST SCAN SUMMARY)`);
+    console.log(`OBSERVED AI ESTATE (SUPPORTED EVIDENCE SUMMARY)`);
     console.log(`Scanned Path: ${scanRes.scannedPath}`);
     console.log(`Assets Discovered: ${scanRes.summary.totalAssets}`);
     console.log(`Agents Discovered: ${scanRes.summary.agentCount}`);
@@ -237,7 +238,7 @@ export class CliCore {
     console.log(`• Conflicts:            ${reconcileRes.summary.conflictCount} 🚨`);
     console.log(`• Undeclared observations: ${reconcileRes.summary.undeclaredCount} 🔍`);
     console.log(`• Unknowns:             ${reconcileRes.summary.unknownCount} ❓`);
-    console.log(`• Critical Findings:    ${reconcileRes.summary.criticalFindingsCount} 💥`);
+    console.log(`• Critical technical findings: ${reconcileRes.summary.criticalFindingsCount} 💥`);
     console.log(`--------------------------------------------------------------------------------\n`);
 
     for (const claim of reconcileRes.reconciledClaims) {
@@ -373,15 +374,17 @@ export class CliCore {
   private static printHelp(): void {
     console.log(`
 tAIdyup CLI v${this.VERSION}
-Evidence-Backed Technical Governance for AI Builders
+Local-first evidence analysis for AI projects
 
 USAGE:
   npx taidyup <command> [targetDir] [options]
 
+Manifestless projects are valid analysis targets. An optional taidyup.json adds owner-declared intent.
+
 COMMANDS:
   init      [targetDir]        Inspect project and generate draft taidyup.json
-  scan      [targetDir]        Run local AST code scan of AI assets and tools
-  validate  [targetDir]        Reconcile taidyup.json against local code scan
+  scan      [targetDir]        Inspect supported local source and workflow evidence
+  validate  [targetDir]        Reconcile optional declarations with available evidence
   report    [targetDir]        Export JSON report, TECHNICAL_PASSPORT.md & taidyup.sarif
   diff      <base> <target>    Compare structural capability evidence between two reports
   connected-n8n                Explicitly inspect current n8n workflow configuration

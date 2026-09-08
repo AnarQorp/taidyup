@@ -1,4 +1,4 @@
-# tAIdyup Local UI — Phase 1
+# tAIdyup Woodcraft Workbench — Repository Local UI
 
 The Phase 1 UI is a visual client of the same application use case used by the CLI:
 
@@ -25,7 +25,9 @@ npm run build
 npm run ui
 ```
 
-Open `http://127.0.0.1:3001` and enter the absolute path of an existing local project directory.
+Open `http://127.0.0.1:3001`, use the native folder picker when available or enter an absolute local path, and analyze. A declaration manifest is optional.
+
+This UI is a Git-repository/local-development capability. The npm Alpha 3 package is CLI-only and does not contain or launch the Workbench.
 
 ## Local bridge security boundary
 
@@ -39,7 +41,7 @@ Open `http://127.0.0.1:3001` and enter the absolute path of an existing local pr
 - Uses no database, organization, user, connector, or hosted-history model.
 - Returns the typed `LocalProjectAnalysis` result containing the Core's original claims, evidence, provenance, findings, and `ReconciledTrustState`.
 
-Because portable browsers do not reveal an absolute filesystem path from a directory picker, Phase 1 uses an explicit local path field. Filesystem access occurs only in the loopback Node process started by the developer.
+Because portable browsers do not reveal an absolute filesystem path from a directory picker, selection is performed by the loopback Node bridge and manual path entry remains available. Filesystem access occurs only in that developer-started local process.
 
 ## Onboarding V1 primitive contracts
 
@@ -60,7 +62,7 @@ The Onboarding V1 UX provides a first-use experience on top of the loopback prim
 
 ## Manifestless V1.1 UX
 
-Manifestless V1.1 supports local projects without a `taidyup.json` or `taidyup.yaml` manifest as valid analysis targets:
+Manifestless V1.1 supports local projects without a declaration manifest as valid analysis targets. JSON is the supported declaration format; real YAML parsing is not supported, and an existing uninterpretable `taidyup.yaml` is an invalid declaration rather than an absent one.
 
 - **Manifest Optionality**: A missing manifest (`manifest.status === 'ABSENT'`) is a successful analysis outcome, not an error or failed setup.
 - **Calm Informational Banner**: Displays "No tAIdyup declarations supplied" with context explaining that technical evidence was analyzed, but no owner declaration source was provided for this project.
@@ -70,6 +72,6 @@ Manifestless V1.1 supports local projects without a `taidyup.json` or `taidyup.y
 
 ## Claim boundary
 
-The UI visualizes declaration and static evidence, and can explicitly request one point-in-time n8n CONNECTED inspection through the local bridge. The browser sends only the environment-variable name; the bridge resolves the token in the local Node process and reuses `analyzeConnectedN8nWorkflow()` and its guarded transport. There is no automatic connection, polling, browser-to-n8n request, credential validation, or execution request.
+The UI visualizes the four evidence dimensions—DECLARED, OBSERVED, CONNECTED, and RUNTIME—and can explicitly request one point-in-time n8n CONNECTED inspection through the local bridge. The browser sends only the environment-variable name; the bridge resolves the token in the local Node process and reuses `analyzeConnectedN8nWorkflow()` and its guarded transport. There is no automatic connection, polling, browser-to-n8n request, credential validation, or execution request.
 
 Set the token in the environment that starts `npm run ui`, enter the local project and explicit CONNECTED fields, review the disclosed GET-only boundary, then start the inspection. A failed CONNECTED request does not replace an already displayed local result. The UI can also import an explicitly selected sanitized local RUNTIME JSONL artifact; it never starts monitoring or provider execution. Technical Passport, SARIF, report history, manifest editing, hosted accounts, regulation, and continuous monitoring remain outside the UI.

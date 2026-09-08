@@ -1,4 +1,4 @@
-name: tAIdyup Technical Governance
+name: tAIdyup RC Verification
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   validate:
-    name: Reconcile AI Agent Authority
+    name: Build, test and smoke the CLI artifact
     runs-on: ubuntu-latest
 
     steps:
@@ -20,17 +20,32 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install tAIdyup CLI
-        run: npm install -g taidyup-0.1.0-alpha.1.tgz
+      - name: Install locked development dependencies
+        run: npm ci
 
-      - name: Validate tAIdyup Manifest & Code Evidence
-        run: taidyup validate --strict
+      - name: Build current checkout
+        run: npm run build
 
-      - name: Generate Technical Passport & SARIF
-        run: taidyup report
+      - name: Run regression suite
+        run: npm test
+
+      - name: Verify manifestless analysis and reports
+        run: |
+          mkdir -p .taidyup-ci
+          node bin/taidyup.js validate .
+          node bin/taidyup.js report . --output-dir .taidyup-ci
+
+      - name: Pack and smoke fresh CLI install
+        run: |
+          npm pack --json > .taidyup-ci/pack.json
+          TARBALL=$(node -e "const p=require('./.taidyup-ci/pack.json'); process.stdout.write(p[0].filename)")
+          PREFIX=$(mktemp -d)
+          npm install --prefix "$PREFIX" "./$TARBALL"
+          "$PREFIX/node_modules/.bin/taidyup" --version
+          "$PREFIX/node_modules/.bin/taidyup" --help
 
       - name: Upload SARIF Security Findings
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
-          sarif_file: taidyup.sarif
+          sarif_file: .taidyup-ci/taidyup.sarif

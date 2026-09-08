@@ -47,6 +47,14 @@ async function main() {
     fs.writeFileSync(path.join(malformed, 'taidyup.json'), '{');
     await assert.rejects(() => analyzeLocalProject(malformed), (error: unknown) => error instanceof ProjectAnalysisError && error.code === 'MANIFEST_INVALID_JSON');
 
+    const unsupportedYaml = project(root, 'unsupported-yaml');
+    fs.writeFileSync(path.join(unsupportedYaml, 'taidyup.yaml'), 'version: "1.0"\nproject: yaml-is-not-supported\nagents: []\n');
+    await assert.rejects(
+      () => analyzeLocalProject(unsupportedYaml),
+      (error: unknown) => error instanceof ProjectAnalysisError && error.code === 'MANIFEST_INVALID_SYNTAX',
+      'an existing uninterpretable YAML declaration must be INVALID, never ABSENT'
+    );
+
     const schemaInvalid = project(root, 'schema-invalid');
     fs.writeFileSync(path.join(schemaInvalid, 'taidyup.json'), JSON.stringify({ version: '1.0', project: 'x', agents: [] }));
     await assert.rejects(() => analyzeLocalProject(schemaInvalid), (error: unknown) => error instanceof ProjectAnalysisError && error.code === 'MANIFEST_SCHEMA_INVALID');

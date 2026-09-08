@@ -47,7 +47,7 @@ npm run build
 npm run ui
 ```
 
-Then open `http://127.0.0.1:3001` and enter the absolute path of an existing local project containing `taidyup.json`.
+Then open `http://127.0.0.1:3001`. Choose or enter any existing local project directory; a declaration manifest is optional.
 
 ![The Woodcraft Workbench showing a real local analysis of the repository's synthetic CONNECTED demo project](docs/assets/screenshots/taidyup-woodcraft-workbench.png)
 
@@ -136,43 +136,41 @@ Report diff is separate: `taidyup diff` compares two saved results. Neither a fa
 
 Requires Node.js 18+.
 
-### Published npm alpha
+### npm Alpha 3 release candidate — CLI only
 
-The published `taidyup@0.1.0-alpha.2` provides DECLARED, OBSERVED, and CONNECTED analysis through the current CLI commands: `init`, `scan`, `validate`, `report`, `diff`, and explicit `connected-n8n` inspection.
-
-Current unreleased Git `main` additionally contains RUNTIME V0, the OpenTelemetry composition validation lab, four-layer product stabilization, and the Woodcraft Workbench. Those additions are not part of the published npm Alpha 2 package. The CLI version intentionally remains `0.1.0-alpha.2` until a separately approved release.
+Version `0.1.0-alpha.3` is currently a release candidate, not yet a published release. Its npm artifact is intentionally CLI-only: `init`, `scan`, `validate`, `report`, `diff`, explicit `connected-n8n`, and explicit `runtime-import`. It does not contain or launch the Woodcraft Workbench.
 
 ```bash
-npm install -g taidyup@alpha
-npx taidyup@alpha --help
+npm install -g taidyup@alpha # installs the currently published alpha dist-tag
+taidyup --help
 ```
 
-The npm-installed Alpha 2 package is CLI-only. To use the graphical interface and its local bridge, use the current repository checkout:
+### Repository/local development UI — Woodcraft Workbench
+
+The Woodcraft Workbench, native folder-picker bridge, bundled onboarding demo, guided tour, and local UI are repository capabilities:
 
 ```bash
 git clone https://github.com/AnarQorp/taidyup.git
 cd taidyup
 npm install
 npm run build
-node bin/taidyup.js --help
+npm run ui
 ```
 
-### Local declaration and source analysis
+Open `http://127.0.0.1:3001`, choose a folder or enter an absolute local path, then analyze. The bundled demo teaches the interface using versioned synthetic local evidence; it does not connect to a provider or execute a workflow.
+
+### CLI quick start — inspect first, declare later
 
 ```bash
-cd your-ai-project
-
-taidyup init
-# Review taidyup.json.draft and explicitly complete agents[].
-taidyup init --accept
-
-taidyup scan .
-taidyup validate .
-taidyup report .
+taidyup scan ./your-ai-project
+taidyup validate ./your-ai-project
+taidyup report ./your-ai-project
 taidyup diff previous-report.json current-report.json
 ```
 
-`init` creates a non-declarative review draft. `init --accept` validates owner-reviewed `agents[]`; scanner suggestions are never promoted into declarations automatically.
+No `taidyup.json` is required for these inspections. With no declaration source, `declarationContext` is `ABSENT`: tAIdyup can report supported technical observations but cannot infer intended authority.
+
+Declarations are optional additional reconciliation context. To adopt one later, run `taidyup init ./your-ai-project`, review and explicitly complete the generated non-declarative `taidyup.json.draft`, then run `taidyup init ./your-ai-project --accept`. Scanner suggestions are never promoted into owner declarations automatically. Alpha 3 supports JSON declarations in `taidyup.json`; real YAML parsing is not supported.
 
 ## Explicit CONNECTED n8n inspection
 
@@ -242,6 +240,8 @@ taidyup validate ./project --runtime-artifact ./runtime.jsonl
 taidyup report ./project --runtime-artifact ./runtime.jsonl
 ```
 
+The repository also contains an OpenTelemetry composition lab used only by tests to validate mapping into the RUNTIME V0 contract. It is **DEV VALIDATION ONLY**: not supported telemetry ingestion, monitoring, instrumentation, or a runtime collector.
+
 ## Outputs and automation
 
 ```bash
@@ -301,6 +301,8 @@ Local-first does not mean that an explicitly requested CONNECTED inspection is o
 tAIdyup is an Early Alpha. Its useful limits include:
 
 - source scanner coverage is selective and can miss capabilities or produce false positives;
+- JSON is the supported declaration format; real YAML parsing is not supported, and an existing uninterpretable `taidyup.yaml` is an invalid declaration source rather than an absent one;
+- the npm Alpha 3 artifact is CLI-only; the Woodcraft Workbench is run from a repository checkout;
 - workflow mappings use a deliberately small allowlist rather than universal n8n understanding;
 - n8n is the first and only implemented workflow and CONNECTED provider;
 - unknown/community nodes and unsupported versions remain `UNMAPPED`;
