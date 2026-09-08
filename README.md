@@ -138,7 +138,7 @@ Requires Node.js 18+.
 
 ### npm Alpha 3 release candidate — CLI only
 
-Version `0.1.0-alpha.3` is a verified release candidate awaiting publication. Its npm artifact is intentionally CLI-only: `init`, `scan`, `validate`, `report`, `diff`, explicit `connected-n8n`, and explicit `runtime-import`. It does not contain or launch the Woodcraft Workbench.
+Version `0.1.0-alpha.3` is currently a release candidate, not yet a published release. Its npm artifact is intentionally CLI-only: `init`, `scan`, `validate`, `report`, `diff`, explicit `connected-n8n`, and explicit `runtime-import`. It does not contain or launch the Woodcraft Workbench.
 
 ```bash
 npm install -g taidyup@alpha # installs the currently published alpha dist-tag
