@@ -346,7 +346,7 @@ tAIdyup's visual identity is inspired by Pinocchio and handcrafted wooden block 
 
 <div align="center">
 
-<img src="docs/assets/brand/taidyup-mark.png" alt="tAIdyup Mark" width="80" />
+<img src="docs/assets/brand/taidyup-brand-identity-canonical.png" alt="tAIdyup Mark" width="80" />
 
 ### What authority did your AI gain while you were building it?
 
