@@ -6,7 +6,7 @@
 
 ### Know your AI while you build it.
 
-**The local-first developer tool for understanding, checking and evidencing what your AI can actually do.**
+**The local-first tool for understanding, checking and evidencing what your AI can actually do — from project intent to technical reality.**
 
 [![npm alpha](https://img.shields.io/npm/v/taidyup/alpha?color=2563eb&label=npm%20alpha)](https://www.npmjs.com/package/taidyup)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
@@ -32,6 +32,16 @@ tAIdyup builds an evidence-backed map of what authority your AI appears to have�
 - what changed, and what remains unknown.
 
 It does not turn configuration or runtime activity into certainty. It preserves the distance between intent, technical evidence, current connected state, observed runtime activity, and what remains unknown.
+
+## From project intent to technical evidence
+
+Building an AI system starts before the first line of code. A team defines its purpose, intended scope, capabilities and limits. Developers then implement agents, tools and workflows; connected configurations and runtime activity may evolve beyond what was initially described.
+
+**Know your AI while you build it** means keeping those perspectives connected throughout the lifecycle. tAIdyup helps teams inspect supported technical signals, compare them with optional owner-reviewed declarations, and make disagreements, changes and unanswered questions visible.
+
+That makes the same evidence useful to **developers** understanding their systems and to **governance and review teams** who need a traceable technical basis for asking what was intended, what was built and what the available evidence can actually establish.
+
+tAIdyup does **not** decide whether a project should be approved, whether a capability is authorized or whether an AI system complies with regulation. Those judgments require business context and human governance. The current Alpha 3 does not automatically ingest organizational questionnaires or governance registers: declarations use the supported optional JSON format, and technical coverage remains deliberately bounded.
 
 ## See your AI, not just another report
 
@@ -321,6 +331,12 @@ tAIdyup is an Early Alpha. Its useful limits include:
 The repository includes adversarial and integration tests for Trust Kernel reconciliation, dimensional claim matching, CONNECTED evidence selection and absence, guarded n8n transport, workflow graph binding, scanner provenance, CLI opt-in, the local UI bridge, and the default no-network boundary.
 
 The CONNECTED V0 proof used a disposable n8n 2.37.10 instance with synthetic workflows and no workflow execution. Tested behavior is evidence about these implemented contracts; it is not proof of universal correctness across every AI system or n8n version.
+
+## Where technical evidence meets governance
+
+The Technical Passport, machine-readable reports, provenance, explicit unknowns and report diffs can support technical reviews and governance conversations. They are **inputs to review**, not audit certificates, legal assessments or proof that an AI system is safe.
+
+For project owners, the starting question is *what is this system intended to do?* For builders, it is *what do the supported technical signals show?* tAIdyup helps compare those answers without treating either one as complete truth.
 
 ## Early Alpha — help us test it
 
